@@ -41,7 +41,30 @@ bluesky-event-publisher
    pip install -r requirements.txt
    ```
 
-3. Configure the application by editing the `config/config.json` and `config/credentials.json` files.
+3. Configure the application by editing the `config/config.json` file.
+
+4. Set up environment variables for your Bluesky credentials:
+   ```
+   export BLUESKY_USERNAME_1=your_username_1 export BLUESKY_PASSWORD_1=your_password_1 export BLUESKY_USERNAME_2=your_username_2 export BLUESKY_PASSWORD_2=your_password_2
+   ```
+
+## Environment Variables
+To avoid storing sensitive credentials in the configuration files, use environment variables. Set the following environment variables before running the application:
+
+- `BLUESKY_USERNAME_1`: The username for the first Bluesky account.
+- `BLUESKY_PASSWORD_1`: The password for the first Bluesky account.
+- `BLUESKY_USERNAME_2`: The username for the second Bluesky account.
+- `BLUESKY_PASSWORD_2`: The password for the second Bluesky account.
+
+You can set these environment variables in your shell or in a `.env` file if you are using Docker Compose.
+
+Example:
+```sh
+export BLUESKY_USERNAME_1=your_username_1
+export BLUESKY_PASSWORD_1=your_password_1
+export BLUESKY_USERNAME_2=your_username_2
+export BLUESKY_PASSWORD_2=your_password_2
+```
 
 ## Running the Application
 To run the application, use Docker:

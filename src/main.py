@@ -12,7 +12,7 @@ from src.bluesky.poster import post_event_to_bluesky
 def main():
     # Load configuration
     config = load_config('config/config.json')
-    credentials = load_credentials('config/credentials.json')
+    credentials = load_credentials()
     
     # Initialize database
     connection = connect_to_db('database/events.db')
@@ -20,7 +20,7 @@ def main():
 
     # Authenticate with Bluesky
     for account in credentials['accounts']:
-        auth_token = authenticate(account['username'], account['access_token'])
+        auth_token = authenticate(account['username'], account['password'])
         account['auth_token'] = auth_token
 
     # Initialize scraper
