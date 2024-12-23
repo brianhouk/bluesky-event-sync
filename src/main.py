@@ -1,15 +1,15 @@
 import json
 import argparse
 from datetime import datetime
-from src.config.config_loader import load_config, load_credentials
-from src.scrapers.oshkosh_scraper import OshkoshScraper
-from src.scrapers.winnebago_scraper import WinnebagoScraper
-from src.database.db_manager import (
+from .config.config_loader import load_config, load_credentials
+from .scrapers.oshkosh_scraper import OshkoshScraper
+from .scrapers.winnebago_scraper import WinnebagoScraper
+from .database.db_manager import (
     connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id
 )
-from src.bluesky.auth import authenticate
-from src.bluesky.poster import post_event_to_bluesky
+from .bluesky.auth import authenticate
+from .bluesky.poster import post_event_to_bluesky
 
 def main():
     # Load configuration
