@@ -39,6 +39,11 @@ def update_event_status(connection, event_id, published):
     ''', (published, event_id))
     connection.commit()
 
+def get_event_by_id(connection, event_id):
+    cursor = connection.cursor()
+    cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
+    return cursor.fetchone()
+
 def close_connection(connection):
     connection.close()
 
