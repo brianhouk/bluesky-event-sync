@@ -12,17 +12,32 @@ def create_event_table(connection):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             url TEXT NOT NULL,
             published BOOLEAN NOT NULL,
-            next_publish_date TEXT NOT NULL
+            next_publish_date TEXT NOT NULL,
+            account_username TEXT NOT NULL
         )
     ''')
     connection.commit()
 
-def add_event(connection, url, next_publish_date):
+def create_publication_schedule_table(connection):
     cursor = connection.cursor()
     cursor.execute('''
-        INSERT INTO events (url, published, next_publish_date)
-        VALUES (?, ?, ?)
-    ''', (url, False, next_publish_date))
+        CREATE TABLE IF NOT EXISTS publication_schedule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            scheduled_time TEXT NOT NULL,
+            account_username TEXT NOT NULL,
+            is_executed BOOLEAN NOT NULL,
+            FOREIGN KEY (event_id) REFERENCES events (id)
+        )
+    ''')
+    connection.commit()
+
+def add_event(connection, url, next_publish_date, account_username):
+    cursor = connection.cursor()
+    cursor.execute('''
+        INSERT INTO events (url, published, next_publish_date, account_username)
+        VALUES (?, ?, ?, ?)
+    ''', (url, False, next_publish_date, account_username))
     connection.commit()
 
 def get_events(connection):
@@ -58,13 +73,13 @@ def calculate_post_timings(event_date):
     ]
     return [event_date - interval for interval in intervals]
 
-def store_post_timings(connection, event_id, post_timings, account_id):
+def store_post_timings(connection, event_id, post_timings, account_username):
     cursor = connection.cursor()
     for timing in post_timings:
         cursor.execute('''
-            INSERT INTO publication_schedule (event_id, scheduled_time, account_id, is_executed)
+            INSERT INTO publication_schedule (event_id, scheduled_time, account_username, is_executed)
             VALUES (?, ?, ?, ?)
-        ''', (event_id, timing, account_id, False))
+        ''', (event_id, timing, account_username, False))
     connection.commit()
 
 def get_due_posts(connection):

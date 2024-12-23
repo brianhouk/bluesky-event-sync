@@ -7,7 +7,18 @@
         "2 weeks",
         "5 days",
         "1 day"
-      ]
+      ],
+      "account_username": "discoveroshkosh"
+    },
+    {
+      "url": "https://www.wisconsinevents.com/",
+      "update_intervals": [
+        "30 days",
+        "2 weeks",
+        "5 days",
+        "1 day"
+      ],
+      "account_username": "wisconsinevents"
     }
   ],
   "bluesky_accounts": [

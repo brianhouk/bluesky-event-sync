@@ -44,26 +44,20 @@ bluesky-event-publisher
 3. Configure the application by editing the `config/config.json` file.
 
 4. Set up environment variables for your Bluesky credentials:
-   ```
-   export BLUESKY_USERNAME_1=your_username_1 export BLUESKY_PASSWORD_1=your_password_1 export BLUESKY_USERNAME_2=your_username_2 export BLUESKY_PASSWORD_2=your_password_2
-   ```
 
 ## Environment Variables
 To avoid storing sensitive credentials in the configuration files, use environment variables. Set the following environment variables before running the application:
 
-- `BLUESKY_USERNAME_1`: The username for the first Bluesky account.
-- `BLUESKY_PASSWORD_1`: The password for the first Bluesky account.
-- `BLUESKY_USERNAME_2`: The username for the second Bluesky account.
-- `BLUESKY_PASSWORD_2`: The password for the second Bluesky account.
+- `BLUESKY_DISCOVEROSHKOSH_PASSWORD`: The password for the `discoveroshkosh` Bluesky account.
+- `BLUESKY_WISCONSINEVENTS_PASSWORD`: The password for the `wisconsinevents` Bluesky account.
 
 You can set these environment variables in your shell or in a `.env` file if you are using Docker Compose.
 
 Example:
 ```sh
-export BLUESKY_USERNAME_1=your_username_1
-export BLUESKY_PASSWORD_1=your_password_1
-export BLUESKY_USERNAME_2=your_username_2
-export BLUESKY_PASSWORD_2=your_password_2
+
+export BLUESKY_DISCOVEROSHKOSH_PASSWORD=your_password_for_discoveroshkosh
+export BLUESKY_WISCONSINEVENTS_PASSWORD=your_password_for_wisconsinevents
 ```
 
 ## Running the Application
@@ -77,3 +71,5 @@ Contributions are welcome! Please submit a pull request or open an issue for any
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
+
+With these changes, the codebase now supports multiple Bluesky accounts, associates each website with a specific account, and stores the account information in the database. The credentials are stored in environment variables to ensure security.

@@ -3,7 +3,7 @@ from datetime import datetime
 from src.config.config_loader import load_config, load_credentials
 from src.scrapers.oshkosh_scraper import OshkoshScraper
 from src.database.db_manager import (
-    connect_to_db, create_event_table, add_event, get_events,
+    connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id
 )
 from src.bluesky.auth import authenticate
@@ -17,6 +17,7 @@ def main():
     # Initialize database
     connection = connect_to_db('database/events.db')
     create_event_table(connection)
+    create_publication_schedule_table(connection)
 
     # Authenticate with Bluesky
     for account in credentials['accounts']:
@@ -24,20 +25,23 @@ def main():
         account['auth_token'] = auth_token
 
     # Initialize scraper
-    oshkosh_scraper = OshkoshScraper(config['websites'][0])
-    
-    # Scrape events
-    events = oshkosh_scraper.scrape()
-    for event in events:
-        event_id = add_event(connection, event['url'], event['date'])
-        post_timings = calculate_post_timings(event['date'])
-        store_post_timings(connection, event_id, post_timings, credentials['accounts'][0]['username'])
+    for website in config['websites']:
+        account_username = website['account_username']
+        account = next(acc for acc in credentials['accounts'] if acc['username'] == account_username)
+        oshkosh_scraper = OshkoshScraper(website)
+        
+        # Scrape events
+        events = oshkosh_scraper.scrape()
+        for event in events:
+            event_id = add_event(connection, event['url'], event['date'], account_username)
+            post_timings = calculate_post_timings(event['date'])
+            store_post_timings(connection, event_id, post_timings, account_username)
 
     # Check for due posts
     due_posts = get_due_posts(connection)
     for post in due_posts:
         event = get_event_by_id(connection, post['event_id'])
-        account = next(acc for acc in credentials['accounts'] if acc['username'] == post['account_id'])
+        account = next(acc for acc in credentials['accounts'] if acc['username'] == post['account_username'])
         post_event_to_bluesky(event, account)
         mark_post_as_executed(connection, post['id'])
 
