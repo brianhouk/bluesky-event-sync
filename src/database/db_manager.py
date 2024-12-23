@@ -59,9 +59,6 @@ def get_event_by_id(connection, event_id):
     cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
     return cursor.fetchone()
 
-def close_connection(connection):
-    connection.close()
-
 def calculate_post_timings(event_date):
     intervals = [
         timedelta(weeks=4),

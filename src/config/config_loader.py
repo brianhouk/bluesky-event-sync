@@ -9,12 +9,12 @@ def load_credentials():
     return {
         "accounts": [
             {
-                "username": os.getenv("BLUESKY_USERNAME_1"),
-                "password": os.getenv("BLUESKY_PASSWORD_1")
+                "username": "discoveroshkosh",
+                "password": os.getenv("BLUESKY_DISCOVEROSHKOSH_PASSWORD")
             },
             {
-                "username": os.getenv("BLUESKY_USERNAME_2"),
-                "password": os.getenv("BLUESKY_PASSWORD_2")
+                "username": "wisconsinevents",
+                "password": os.getenv("BLUESKY_WISCONSINEVENTS_PASSWORD")
             }
         ]
     }
