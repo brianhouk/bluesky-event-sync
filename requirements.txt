@@ -1,6 +1,5 @@
 requests
 beautifulsoup4
 sqlalchemy
-sqlite3
 docker
 atproto
