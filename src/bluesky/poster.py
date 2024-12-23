@@ -10,6 +10,9 @@ def post_event_to_bluesky(event_data, account_info):
         response (dict): The response from the Bluesky API after posting the event.
     """
     # Implement the logic to post the event to Bluesky API
+    hashtags = event_data.get('hashtags', [])
+    post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
+    # Use the Bluesky API to post the content
     pass
 
 def schedule_posts(events, intervals, account_info):

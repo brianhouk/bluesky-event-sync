@@ -33,7 +33,7 @@ def main():
         # Scrape events
         events = oshkosh_scraper.scrape()
         for event in events:
-            event_id = add_event(connection, event['url'], event['date'], account_username)
+            event_id = add_event(connection, event['url'], event['date'], account_username, website['name'], website['hashtags'])
             post_timings = calculate_post_timings(event['date'])
             store_post_timings(connection, event_id, post_timings, account_username)
 

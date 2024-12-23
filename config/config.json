@@ -1,6 +1,7 @@
 {
   "websites": [
     {
+      "name": "OshkoshEvents",
       "url": "https://www.visitoshkosh.com/events/",
       "update_intervals": [
         "30 days",
@@ -8,27 +9,20 @@
         "5 days",
         "1 day"
       ],
-      "account_username": "discoveroshkosh"
+      "account_username": "discoveroshkosh",
+      "hashtags": ["#oshkosh", "#oshkoshevents", "#wisconsin"]
     },
     {
-      "url": "https://www.wisconsinevents.com/",
+      "name": "WinnebagoEvents",
+      "url": "https://www.co.winnebago.wi.us/parks/sunnyview-exposition-center/event-calendar-upcoming-list",
       "update_intervals": [
         "30 days",
         "2 weeks",
         "5 days",
         "1 day"
       ],
-      "account_username": "wisconsinevents"
-    }
-  ],
-  "bluesky_accounts": [
-    {
-      "account_name": "example_account_1",
-      "auth_code": "your_auth_code_here"
-    },
-    {
-      "account_name": "example_account_2",
-      "auth_code": "your_auth_code_here"
+      "account_username": "wisconsinevents",
+      "hashtags": ["#winnebago", "#winnebagoevents", "#wisconsin"]
     }
   ],
   "dry_run": true,

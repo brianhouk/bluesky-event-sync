@@ -13,7 +13,9 @@ def create_event_table(connection):
             url TEXT NOT NULL,
             published BOOLEAN NOT NULL,
             next_publish_date TEXT NOT NULL,
-            account_username TEXT NOT NULL
+            account_username TEXT NOT NULL,
+            config_name TEXT NOT NULL,
+            hashtags TEXT NOT NULL
         )
     ''')
     connection.commit()
@@ -32,12 +34,12 @@ def create_publication_schedule_table(connection):
     ''')
     connection.commit()
 
-def add_event(connection, url, next_publish_date, account_username):
+def add_event(connection, url, next_publish_date, account_username, config_name, hashtags):
     cursor = connection.cursor()
     cursor.execute('''
-        INSERT INTO events (url, published, next_publish_date, account_username)
-        VALUES (?, ?, ?, ?)
-    ''', (url, False, next_publish_date, account_username))
+        INSERT INTO events (url, published, next_publish_date, account_username, config_name, hashtags)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (url, False, next_publish_date, account_username, config_name, ','.join(hashtags)))
     connection.commit()
 
 def get_events(connection):
