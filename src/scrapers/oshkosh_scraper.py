@@ -1,3 +1,5 @@
+import feedparser
+from datetime import datetime
 from src.scrapers.base_scraper import BaseScraper
 
 class OshkoshScraper(BaseScraper):
@@ -5,15 +7,29 @@ class OshkoshScraper(BaseScraper):
         super().__init__(config)
 
     def scrape(self):
-        # Implement the scraping logic for Oshkosh events
-        # This is a placeholder for the actual scraping code
+        feed = feedparser.parse(self.config['url'])
         events = []
-        # Example scraping logic would go here
+
+        for entry in feed.entries:
+            title = entry.title
+            date_str = entry.published
+            date = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+            url = entry.link
+            events.append({
+                'title': title,
+                'date': date,
+                'url': url
+            })
+
         return events
 
     def process_data(self, data):
         # Implement the logic to process the scraped data
-        # This is a placeholder for the actual data processing code
         processed_events = []
-        # Example data processing logic would go here
+        for event in data:
+            processed_events.append({
+                'title': event['title'],
+                'date': event['date'],
+                'url': event['url']
+            })
         return processed_events
