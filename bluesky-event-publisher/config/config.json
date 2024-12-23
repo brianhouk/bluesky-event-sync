@@ -1,0 +1,25 @@
+{
+  "websites": [
+    {
+      "url": "https://www.visitoshkosh.com/events/",
+      "update_intervals": [
+        "30 days",
+        "2 weeks",
+        "5 days",
+        "1 day"
+      ]
+    }
+  ],
+  "bluesky_accounts": [
+    {
+      "account_name": "example_account_1",
+      "auth_code": "your_auth_code_here"
+    },
+    {
+      "account_name": "example_account_2",
+      "auth_code": "your_auth_code_here"
+    }
+  ],
+  "dry_run": true,
+  "max_sites": 50
+}
