@@ -15,15 +15,20 @@ class WinnebagoScraper(BaseScraper):
         # Implement the scraping logic for Winnebago events
         event_elements = soup.select('.views-row')
         for event_element in event_elements:
-            title = event_element.select_one('.views-field-title').get_text(strip=True)
-            date_str = event_element.select_one('.views-field-field-date').get_text(strip=True)
-            date = datetime.strptime(date_str, '%B %d, %Y')
-            url = event_element.select_one('.views-field-title a')['href']
-            events.append({
-                'title': title,
-                'date': date,
-                'url': url
-            })
+            title_element = event_element.select_one('.views-field-title')
+            date_element = event_element.select_one('.views-field-field-date')
+            url_element = event_element.select_one('.views-field-title a')
+
+            if title_element and date_element and url_element:
+                title = title_element.get_text(strip=True)
+                date_str = date_element.get_text(strip=True)
+                date = datetime.strptime(date_str, '%B %d, %Y')
+                url = url_element['href']
+                events.append({
+                    'title': title,
+                    'date': date,
+                    'url': url
+                })
 
         return events
 
