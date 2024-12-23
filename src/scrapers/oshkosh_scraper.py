@@ -1,13 +1,4 @@
-class BaseScraper:
-    def __init__(self, config):
-        self.config = config
-
-    def scrape(self):
-        raise NotImplementedError("Scrape method must be implemented by subclasses.")
-
-    def process_data(self, data):
-        raise NotImplementedError("Process data method must be implemented by subclasses.")
-
+from src.scrapers.base_scraper import BaseScraper
 
 class OshkoshScraper(BaseScraper):
     def __init__(self, config):

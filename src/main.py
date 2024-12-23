@@ -1,7 +1,9 @@
 import json
+import argparse
 from datetime import datetime
 from src.config.config_loader import load_config, load_credentials
 from src.scrapers.oshkosh_scraper import OshkoshScraper
+from src.scrapers.winnebago_scraper import WinnebagoScraper
 from src.database.db_manager import (
     connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id
@@ -28,10 +30,13 @@ def main():
     for website in config['websites']:
         account_username = website['account_username']
         account = next(acc for acc in credentials['accounts'] if acc['username'] == account_username)
-        oshkosh_scraper = OshkoshScraper(website)
+        if website['name'] == 'OshkoshEvents':
+            scraper = OshkoshScraper(website)
+        elif website['name'] == 'WinnebagoEvents':
+            scraper = WinnebagoScraper(website)
         
         # Scrape events
-        events = oshkosh_scraper.scrape()
+        events = scraper.scrape()
         for event in events:
             event_id = add_event(connection, event['url'], event['date'], account_username, website['name'], website['hashtags'])
             post_timings = calculate_post_timings(event['date'])
@@ -45,5 +50,30 @@ def main():
         post_event_to_bluesky(event, account)
         mark_post_as_executed(connection, post['id'])
 
+def dry_run():
+    # Load configuration
+    config = load_config('config/config.json')
+
+    # Initialize scraper
+    for website in config['websites']:
+        if website['name'] == 'OshkoshEvents':
+            scraper = OshkoshScraper(website)
+        elif website['name'] == 'WinnebagoEvents':
+            scraper = WinnebagoScraper(website)
+        
+        # Scrape events
+        events = scraper.scrape()
+        processed_events = scraper.process_data(events)
+        print(f"Dry run for {website['name']}:")
+        for event in processed_events:
+            print(event)
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Bluesky Event Publisher')
+    parser.add_argument('--dry-run', action='store_true', help='Run the scrapers in dry-run mode')
+    args = parser.parse_args()
+
+    if args.dry_run:
+        dry_run()
+    else:
+        main()

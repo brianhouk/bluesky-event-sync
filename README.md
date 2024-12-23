@@ -66,10 +66,13 @@ To run the application, use Docker:
 docker-compose up
 ```
 
+To run the application in dry-run mode:
+```
+python src/main.py --dry-run
+```
+
 ## Contributing
 Contributions are welcome! Please submit a pull request or open an issue for any enhancements or bug fixes.
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
-
-With these changes, the codebase now supports multiple Bluesky accounts, associates each website with a specific account, and stores the account information in the database. The credentials are stored in environment variables to ensure security.
