@@ -1,15 +1,24 @@
-def authenticate(api_key, api_secret):
-    # Logic to authenticate with the Bluesky API using the provided API key and secret
-    pass
+from atproto import Client
+
+_session = None
+
+def authenticate(username, app_password):
+    global _session
+    _session = Client()
+    _session.login(username, app_password)
+    return _session.com_atproto_server_create_session.data.get("accessJwt")
 
 def get_access_token():
-    # Logic to retrieve and manage the access token for the Bluesky API
-    pass
+    if not _session:
+        raise RuntimeError("Not authenticated")
+    return _session.com_atproto_server_create_session.data.get("accessJwt")
 
 def refresh_access_token(refresh_token):
-    # Logic to refresh the access token using the provided refresh token
-    pass
+    if not _session:
+        raise RuntimeError("Not authenticated")
+    response = _session.com_atproto_server_refresh_session(refresh_token=refresh_token)
+    return response.data.get("accessJwt")
 
 def logout():
-    # Logic to log out from the Bluesky API
-    pass
+    global _session
+    _session = None
