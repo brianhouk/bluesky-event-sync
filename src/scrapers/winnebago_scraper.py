@@ -13,7 +13,7 @@ else:
     from .base_scraper import BaseScraper
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levellevelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class WinnebagoScraper(BaseScraper):
@@ -48,12 +48,21 @@ class WinnebagoScraper(BaseScraper):
                         except ValueError as e:
                             logger.error(f"Error parsing date: {date_str} - {e}")
                             continue
-                        events.append({
-                            'title': title,
-                            'date': date,
-                            'url': url
-                        })
-                        logger.debug(f"Added event: {title} on {date}")
+                        # Check if the event already exists
+                        existing_event = next((event for event in events if event['title'] == title and event['url'] == url), None)
+                        if existing_event:
+                            # Update the end date if the new date is later
+                            if date > existing_event['end_date']:
+                                existing_event['end_date'] = date
+                        else:
+                            # Add a new event with start and end date
+                            events.append({
+                                'title': title,
+                                'start_date': date,
+                                'end_date': date,
+                                'url': url
+                            })
+                            logger.debug(f"Added event: {title} from {date}")
 
             page += 1
 
@@ -66,7 +75,8 @@ class WinnebagoScraper(BaseScraper):
         for event in data:
             processed_events.append({
                 'title': event['title'],
-                'date': event['date'],
+                'start_date': event['start_date'],
+                'end_date': event['end_date'],
                 'url': event['url']
             })
         logger.debug(f"Processed {len(processed_events)} events")
