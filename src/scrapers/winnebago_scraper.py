@@ -1,7 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from src.scrapers.base_scraper import BaseScraper
+import sys
+import os
+
+# Adjust imports based on how the script is run
+if __name__ == "__main__":
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from scrapers.base_scraper import BaseScraper
+else:
+    from .base_scraper import BaseScraper
 
 class WinnebagoScraper(BaseScraper):
     def __init__(self, config):
@@ -42,3 +50,15 @@ class WinnebagoScraper(BaseScraper):
                 'url': event['url']
             })
         return processed_events
+
+if __name__ == "__main__":
+    # Example configuration for testing
+    config = {
+        'url': 'https://www.co.winnebago.wi.us/parks/sunnyview-exposition-center/event-calendar-upcoming-list'
+    }
+    scraper = WinnebagoScraper(config)
+    events = scraper.scrape()
+    processed_events = scraper.process_data(events)
+    print("Scraped Events:")
+    for event in processed_events:
+        print(event)
