@@ -23,6 +23,7 @@ class WinnebagoScraper(BaseScraper):
     def scrape(self):
         events = []
         page = 0
+        base_url = "https://www.co.winnebago.wi.us"
         while True:
             url = f"{self.config['url']}?page={page}"
             logger.debug(f"Scraping URL: {url}")
@@ -40,7 +41,8 @@ class WinnebagoScraper(BaseScraper):
                 date_elements = event_element.select('.views-field-field-date-time .datetime')
                 if title_element and date_elements:
                     title = title_element.get_text(strip=True)
-                    url = title_element['href']
+                    relative_url = title_element['href']
+                    full_url = base_url + relative_url
                     for date_element in date_elements:
                         date_str = date_element.get_text(strip=True)
                         try:
@@ -49,7 +51,7 @@ class WinnebagoScraper(BaseScraper):
                             logger.error(f"Error parsing date: {date_str} - {e}")
                             continue
                         # Check if the event already exists
-                        existing_event = next((event for event in events if event['title'] == title and event['url'] == url), None)
+                        existing_event = next((event for event in events if event['title'] == title and event['url'] == full_url), None)
                         if existing_event:
                             # Update the end date if the new date is later
                             if date > existing_event['end_date']:
@@ -60,7 +62,7 @@ class WinnebagoScraper(BaseScraper):
                                 'title': title,
                                 'start_date': date,
                                 'end_date': date,
-                                'url': url
+                                'url': full_url
                             })
                             logger.debug(f"Added event: {title} from {date}")
 
