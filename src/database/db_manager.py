@@ -22,7 +22,8 @@ def create_event_table(connection):
             published BOOLEAN NOT NULL,
             account_username TEXT NOT NULL,
             config_name TEXT NOT NULL,
-            hashtags TEXT NOT NULL
+            hashtags TEXT NOT NULL,
+            UNIQUE(title, start_date, url)
         )
     ''')
     connection.commit()
@@ -43,11 +44,14 @@ def create_publication_schedule_table(connection):
 
 def add_event(connection, title, start_date, end_date, url, description, location, address, city, region, account_username, config_name, hashtags):
     cursor = connection.cursor()
-    cursor.execute('''
-        INSERT INTO events (title, start_date, end_date, url, description, location, address, city, region, published, account_username, config_name, hashtags)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (title, start_date, end_date, url, description, location, address, city, region, False, account_username, config_name, ','.join(hashtags)))
-    connection.commit()
+    try:
+        cursor.execute('''
+            INSERT INTO events (title, start_date, end_date, url, description, location, address, city, region, published, account_username, config_name, hashtags)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (title, start_date.isoformat(), end_date.isoformat(), url, description, location, address, city, region, False, account_username, config_name, ','.join(hashtags)))
+        connection.commit()
+    except sqlite3.IntegrityError:
+        print(f"Event '{title}' already exists in the database.")
 
 def get_events(connection):
     cursor = connection.cursor()
@@ -85,7 +89,7 @@ def store_post_timings(connection, event_id, post_timings, account_username):
         cursor.execute('''
             INSERT INTO publication_schedule (event_id, scheduled_time, account_username, is_executed)
             VALUES (?, ?, ?, ?)
-        ''', (event_id, timing, account_username, False))
+        ''', (event_id, timing.isoformat(), account_username, False))
     connection.commit()
 
 def get_due_posts(connection):
@@ -93,7 +97,7 @@ def get_due_posts(connection):
     cursor.execute('''
         SELECT * FROM publication_schedule
         WHERE scheduled_time <= ? AND is_executed = ?
-    ''', (datetime.now(), False))
+    ''', (datetime.now().isoformat(), False))
     return cursor.fetchall()
 
 def mark_post_as_executed(connection, schedule_id):

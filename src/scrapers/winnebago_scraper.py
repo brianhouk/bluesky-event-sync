@@ -72,19 +72,8 @@ class WinnebagoScraper(BaseScraper):
         for event in data:
             processed_events.append({
                 'title': event['title'],
-                'start_date': event['start_date'],
-                'end_date': event['end_date'],
+                'start_date': event['start_date'].isoformat(),
+                'end_date': event['end_date'].isoformat(),
                 'url': event['url']
             })
         return processed_events
-
-if __name__ == "__main__":
-    # Example configuration for testing
-    config = {
-        'url': 'https://www.co.winnebago.wi.us/parks/sunnyview-exposition-center/event-calendar-upcoming-list'
-    }
-    scraper = WinnebagoScraper(config)
-    events = scraper.scrape()
-    processed_events = scraper.process_data(events)
-    for event in processed_events:
-        print(event)

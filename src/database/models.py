@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -20,6 +20,8 @@ class Event(Base):
     account_username = Column(String, nullable=False)
     config_name = Column(String, nullable=False)
     hashtags = Column(String, nullable=False)
+
+    __table_args__ = (UniqueConstraint('title', 'start_date', 'url', name='_event_uc'),)
 
 class PublicationSchedule(Base):
     __tablename__ = 'publication_schedule'

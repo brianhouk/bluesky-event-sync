@@ -41,8 +41,8 @@ def main():
             event_id = add_event(
                 connection,
                 event['title'],
-                event['start_date'],
-                event['end_date'],
+                datetime.fromisoformat(event['start_date']),
+                datetime.fromisoformat(event['end_date']),
                 event['url'],
                 event['description'],
                 event['location'],
@@ -53,7 +53,7 @@ def main():
                 website['name'],
                 website['hashtags']
             )
-            post_timings = calculate_post_timings(event['start_date'])
+            post_timings = calculate_post_timings(datetime.fromisoformat(event['start_date']))
             store_post_timings(connection, event_id, post_timings, account_username)
 
     # Check for due posts
