@@ -154,6 +154,7 @@ class OshkoshScraper(BaseScraper):
         # Implement the logic to process the scraped data
         processed_events = []
         for event in data:
+            print(event)
             processed_events.append({
                 'title': event['title'],
                 'start_date': event['start_date'],
