@@ -13,7 +13,7 @@ else:
     from .base_scraper import BaseScraper
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class WinnebagoScraper(BaseScraper):
@@ -26,12 +26,10 @@ class WinnebagoScraper(BaseScraper):
         page = 0
         while True:
             url = f"{self.base_url}?page={page}"
-            logger.debug(f"Scraping URL: {url}")
             response = requests.get(url)
             soup = BeautifulSoup(response.content, 'html.parser')
 
             event_elements = soup.select('.views-row')
-            logger.debug(f"Found {len(event_elements)} event elements on page {page}")
 
             if not event_elements:
                 break
@@ -48,7 +46,6 @@ class WinnebagoScraper(BaseScraper):
                         try:
                             date = datetime.strptime(date_str, '%A, %B %d, %Y - %H:%M')
                         except ValueError as e:
-                            logger.error(f"Error parsing date: {date_str} - {e}")
                             continue
                         # Check if the event already exists
                         existing_event = next((event for event in events if event['title'] == title and event['url'] == full_url), None)
@@ -64,11 +61,9 @@ class WinnebagoScraper(BaseScraper):
                                 'end_date': date,
                                 'url': full_url
                             })
-                            logger.debug(f"Added event: {title} from {date}")
 
             page += 1
 
-        logger.debug(f"Scraping completed with {len(events)} events found")
         return events
 
     def process_data(self, data):
@@ -81,7 +76,6 @@ class WinnebagoScraper(BaseScraper):
                 'end_date': event['end_date'],
                 'url': event['url']
             })
-        logger.debug(f"Processed {len(processed_events)} events")
         return processed_events
 
 if __name__ == "__main__":
@@ -92,6 +86,5 @@ if __name__ == "__main__":
     scraper = WinnebagoScraper(config)
     events = scraper.scrape()
     processed_events = scraper.process_data(events)
-    print("Scraped Events:")
     for event in processed_events:
         print(event)

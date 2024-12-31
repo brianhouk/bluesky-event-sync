@@ -22,7 +22,7 @@ else:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('selenium_scraping.log', mode='w', encoding='utf-8'),
@@ -58,7 +58,6 @@ class OshkoshScraper(BaseScraper):
                 full_url = base_url + href
                 if full_url not in links:  # Avoid duplicates
                     links.append(full_url)
-                    logger.debug(f'Extracted event link: {full_url}')
         return links
 
     def is_next_button_present(self, driver):
@@ -66,14 +65,11 @@ class OshkoshScraper(BaseScraper):
             next_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.CLASS_NAME, 'nxt'))
             )
-            logger.debug('Next button is present and clickable.')
             return next_button
         except Exception:
-            logger.debug('Next button is not present or not clickable.')
             return None
 
     def scrape_all_event_links(self, start_url, base_url, max_pages=10):
-        logger.debug('Starting to scrape all event links...')
         all_links = []
         visited_pages = set()
         page_count = 0
@@ -83,7 +79,6 @@ class OshkoshScraper(BaseScraper):
             while page_count < max_pages:
                 current_url = self.driver.current_url
                 if current_url in visited_pages:
-                    logger.warning(f'Already visited {current_url}. Ending pagination.')
                     break
                 visited_pages.add(current_url)
                 page_count += 1
@@ -98,20 +93,16 @@ class OshkoshScraper(BaseScraper):
                     next_button.click()
                     time.sleep(3)  # Wait for the next page to load
                 else:
-                    logger.info('No next button found. Reached the last page.')
                     break
 
-            logger.debug('Waiting for 5 seconds before closing the browser...')
             time.sleep(5)
         except Exception as e:
-            logger.critical(f'An unexpected error occurred: {e}')
+            pass
         finally:
             self.driver.quit()
-            logger.debug('WebDriver closed.')
 
         # Remove duplicate links
         all_links = list(set(all_links))
-        logger.info(f'Total unique event links scraped: {len(all_links)}')
         return all_links
 
     def scrape(self):
@@ -121,7 +112,6 @@ class OshkoshScraper(BaseScraper):
         events = []
 
         for link in event_links:
-            logger.debug(f"Processing event link: {link}")
             response = requests.get(link)
             soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -131,7 +121,6 @@ class OshkoshScraper(BaseScraper):
                 try:
                     event_data = json.loads(json_ld.string)
                     if event_data.get('@type') == 'Event':
-                        logger.debug(f"Extracted JSON-LD: {event_data}")
                         events.append({
                             'name': event_data.get('name', 'N/A'),
                             'startDate': event_data.get('startDate', 'N/A'),
@@ -144,9 +133,8 @@ class OshkoshScraper(BaseScraper):
                             'region': event_data.get('location', {}).get('address', {}).get('addressRegion', 'N/A')
                         })
                 except json.JSONDecodeError as e:
-                    logger.error(f"Error parsing JSON-LD: {e}")
+                    pass
 
-        logger.debug(f"Scraping completed with {len(events)} events found")
         return events
 
     def process_data(self, data):
@@ -164,7 +152,6 @@ class OshkoshScraper(BaseScraper):
                 'city': event['city'],
                 'region': event['region']
             })
-        logger.debug(f"Processed {len(processed_events)} events")
         return processed_events
 
 if __name__ == "__main__":
@@ -179,6 +166,3 @@ if __name__ == "__main__":
     scraper = OshkoshScraper(config, test_run=args.test_run)
     events = scraper.scrape()
     processed_events = scraper.process_data(events)
-    print("Scraped Events:")
-    for event in processed_events:
-        print(event)
