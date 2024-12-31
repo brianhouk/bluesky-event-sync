@@ -118,14 +118,20 @@ class OshkoshScraper(BaseScraper):
         events = []
 
         for link in event_links:
+            logger.debug(f"Processing event link: {link}")
             response = requests.get(link)
             soup = BeautifulSoup(response.content, 'html.parser')
             title_element = soup.select_one('h1.event-title')
             date_element = soup.select_one('dl.priority-info dd')
             time_element = soup.select_one('dl dd:contains("Time:")')
+            logger.debug(f"title_element: {title_element}")
+            logger.debug(f"date_element: {date_element}")
+            logger.debug(f"time_element: {time_element}")
             if title_element and date_element:
                 title = title_element.get_text(strip=True)
                 date_str = date_element.get_text(strip=True)
+                logger.debug(f"title: {title}")
+                logger.debug(f"date_str: {date_str}")
                 try:
                     if 'to' in date_str:
                         start_date_str, end_date_str = date_str.split(' to ')
@@ -133,11 +139,13 @@ class OshkoshScraper(BaseScraper):
                         end_date = datetime.strptime(end_date_str.strip(), '%B %d, %Y')
                     else:
                         start_date = end_date = datetime.strptime(date_str.strip(), '%B %d, %Y')
+                    logger.debug(f"start_date: {start_date}, end_date: {end_date}")
                 except ValueError as e:
                     logger.error(f"Error parsing date: {date_str} - {e}")
                     continue
 
                 time_str = time_element.get_text(strip=True) if time_element else ''
+                logger.debug(f"time_str: {time_str}")
                 events.append({
                     'title': title,
                     'start_date': start_date,
@@ -154,7 +162,6 @@ class OshkoshScraper(BaseScraper):
         # Implement the logic to process the scraped data
         processed_events = []
         for event in data:
-            print(event)
             processed_events.append({
                 'title': event['title'],
                 'start_date': event['start_date'],
