@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+import re
 
 # Adjust imports based on how the script is run
 if __name__ == "__main__":
@@ -50,7 +51,7 @@ class OshkoshScraper(BaseScraper):
         anchor_tags = soup.find_all('a', href=True)
         for tag in anchor_tags:
             href = tag['href']
-            if href.startswith('/event'):
+            if re.search(r'/event/.*/\d{6,}/$', href):
                 full_url = base_url + href
                 if full_url not in links:  # Avoid duplicates
                     links.append(full_url)
@@ -120,22 +121,31 @@ class OshkoshScraper(BaseScraper):
             response = requests.get(link)
             soup = BeautifulSoup(response.content, 'html.parser')
             title_element = soup.select_one('h1.event-title')
-            date_element = soup.select_one('.event-date')
+            date_element = soup.select_one('dl.priority-info dd')
+            time_element = soup.select_one('dl dd:contains("Time:")')
             if title_element and date_element:
                 title = title_element.get_text(strip=True)
                 date_str = date_element.get_text(strip=True)
                 try:
-                    date = datetime.strptime(date_str, '%B %d, %Y')
+                    if 'to' in date_str:
+                        start_date_str, end_date_str = date_str.split(' to ')
+                        start_date = datetime.strptime(start_date_str.strip(), '%B %d, %Y')
+                        end_date = datetime.strptime(end_date_str.strip(), '%B %d, %Y')
+                    else:
+                        start_date = end_date = datetime.strptime(date_str.strip(), '%B %d, %Y')
                 except ValueError as e:
                     logger.error(f"Error parsing date: {date_str} - {e}")
                     continue
+
+                time_str = time_element.get_text(strip=True) if time_element else ''
                 events.append({
                     'title': title,
-                    'start_date': date,
-                    'end_date': date,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'time': time_str,
                     'url': link
                 })
-                logger.debug(f"Added event: {title} from {date}")
+                logger.debug(f"Added event: {title} from {start_date} to {end_date} at {time_str}")
 
         logger.debug(f"Scraping completed with {len(events)} events found")
         return events
@@ -148,6 +158,7 @@ class OshkoshScraper(BaseScraper):
                 'title': event['title'],
                 'start_date': event['start_date'],
                 'end_date': event['end_date'],
+                'time': event.get('time', ''),
                 'url': event['url']
             })
         logger.debug(f"Processed {len(processed_events)} events")
