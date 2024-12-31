@@ -23,7 +23,6 @@ class WinnebagoScraper(BaseScraper):
     def scrape(self):
         events = []
         page = 0
-        base_url = "https://www.co.winnebago.wi.us"
         while True:
             url = f"{self.config['url']}?page={page}"
             logger.debug(f"Scraping URL: {url}")

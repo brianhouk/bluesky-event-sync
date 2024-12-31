@@ -2,7 +2,7 @@
   "websites": [
     {
       "name": "OshkoshEvents",
-      "url": "https://www.visitoshkosh.com/event/rss/",
+      "url": "https://www.visitoshkosh.com/events/?bounds=false&view=list&sort=date",
       "update_intervals": [
         "30 days",
         "2 weeks",
