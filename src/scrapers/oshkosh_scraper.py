@@ -121,31 +121,47 @@ class OshkoshScraper(BaseScraper):
             logger.debug(f"Processing event link: {link}")
             response = requests.get(link)
             soup = BeautifulSoup(response.content, 'html.parser')
-            title_element = soup.select_one('h1.event-title')
-            date_element = soup.select_one('dl.priority-info dd')
-            time_element = soup.select_one('dl dd:contains("Time:")')
+
+            # Extracting the title
+            title_element = soup.find('h1', class_='event-title')  # **CHANGED**
+
+            # Extracting the date
+            date_element = soup.find('dl', class_='priority-info')  # **CHANGED**
+            if date_element:
+                date_label = date_element.find('dt', string='Dates:')
+                if date_label:
+                    date_element = date_label.find_next_sibling('dd')  # **CHANGED**
+
+            # Extracting the time
+            time_element = soup.find('dl')  # **CHANGED**
+            if time_element:
+                time_label = time_element.find('dt', string='Time:')
+                if time_label:
+                    time_element = time_label.find_next_sibling('dd')  # **CHANGED**
+
             logger.debug(f"title_element: {title_element}")
             logger.debug(f"date_element: {date_element}")
             logger.debug(f"time_element: {time_element}")
+
             if title_element and date_element:
                 title = title_element.get_text(strip=True)
                 date_str = date_element.get_text(strip=True)
                 logger.debug(f"title: {title}")
                 logger.debug(f"date_str: {date_str}")
                 try:
-                    if 'to' in date_str:
+                    if ' to ' in date_str:  # Handle date ranges
                         start_date_str, end_date_str = date_str.split(' to ')
                         start_date = datetime.strptime(start_date_str.strip(), '%B %d, %Y')
                         end_date = datetime.strptime(end_date_str.strip(), '%B %d, %Y')
-                    else:
+                    else:  # Single date
                         start_date = end_date = datetime.strptime(date_str.strip(), '%B %d, %Y')
-                    logger.debug(f"start_date: {start_date}, end_date: {end_date}")
                 except ValueError as e:
                     logger.error(f"Error parsing date: {date_str} - {e}")
                     continue
 
-                time_str = time_element.get_text(strip=True) if time_element else ''
+                time_str = time_element.get_text(strip=True) if time_element else 'N/A'  # **CHANGED**
                 logger.debug(f"time_str: {time_str}")
+
                 events.append({
                     'title': title,
                     'start_date': start_date,
