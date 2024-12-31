@@ -1,9 +1,10 @@
 import os
 import json
 
-def load_config(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+def load_config(config_path):
+    with open(config_path, 'r') as config_file:
+        config = json.load(config_file)
+    return config
 
 def load_credentials():
     return {

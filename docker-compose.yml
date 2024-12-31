@@ -2,14 +2,12 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    env_file:
+      - .env
     volumes:
-      - ./src:/app/src
-      - ./config:/app/config
-    environment:
-      - DATABASE_URL=sqlite:///app/database/events.db
+      - .:/app
+    command: python src/main.py
     depends_on:
       - db
 
