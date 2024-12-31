@@ -10,6 +10,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import re
+import argparse
+import json
 
 # Adjust imports based on how the script is run
 if __name__ == "__main__":
@@ -30,9 +32,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class OshkoshScraper(BaseScraper):
-    def __init__(self, config):
+    def __init__(self, config, test_run=False):
         super().__init__(config)
         self.driver = self.initialize_driver()
+        self.test_run = test_run
 
     def initialize_driver(self):
         options = webdriver.ChromeOptions()
@@ -122,54 +125,26 @@ class OshkoshScraper(BaseScraper):
             response = requests.get(link)
             soup = BeautifulSoup(response.content, 'html.parser')
 
-            # Extracting the title
-            title_element = soup.find('h1', class_='event-title')  # **CHANGED**
-
-            # Extracting the date
-            date_element = soup.find('dl', class_='priority-info')  # **CHANGED**
-            if date_element:
-                date_label = date_element.find('dt', string='Dates:')
-                if date_label:
-                    date_element = date_label.find_next_sibling('dd')  # **CHANGED**
-
-            # Extracting the time
-            time_element = soup.find('dl')  # **CHANGED**
-            if time_element:
-                time_label = time_element.find('dt', string='Time:')
-                if time_label:
-                    time_element = time_label.find_next_sibling('dd')  # **CHANGED**
-
-            logger.debug(f"title_element: {title_element}")
-            logger.debug(f"date_element: {date_element}")
-            logger.debug(f"time_element: {time_element}")
-
-            if title_element and date_element:
-                title = title_element.get_text(strip=True)
-                date_str = date_element.get_text(strip=True)
-                logger.debug(f"title: {title}")
-                logger.debug(f"date_str: {date_str}")
+            # Extract structured data in JSON-LD format
+            json_ld = soup.find('script', type='application/ld+json')
+            if json_ld:
                 try:
-                    if ' to ' in date_str:  # Handle date ranges
-                        start_date_str, end_date_str = date_str.split(' to ')
-                        start_date = datetime.strptime(start_date_str.strip(), '%B %d, %Y')
-                        end_date = datetime.strptime(end_date_str.strip(), '%B %d, %Y')
-                    else:  # Single date
-                        start_date = end_date = datetime.strptime(date_str.strip(), '%B %d, %Y')
-                except ValueError as e:
-                    logger.error(f"Error parsing date: {date_str} - {e}")
-                    continue
-
-                time_str = time_element.get_text(strip=True) if time_element else 'N/A'  # **CHANGED**
-                logger.debug(f"time_str: {time_str}")
-
-                events.append({
-                    'title': title,
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'time': time_str,
-                    'url': link
-                })
-                logger.debug(f"Added event: {title} from {start_date} to {end_date} at {time_str}")
+                    event_data = json.loads(json_ld.string)
+                    if event_data.get('@type') == 'Event':
+                        logger.debug(f"Extracted JSON-LD: {event_data}")
+                        events.append({
+                            'name': event_data.get('name', 'N/A'),
+                            'startDate': event_data.get('startDate', 'N/A'),
+                            'endDate': event_data.get('endDate', 'N/A'),
+                            'url': link,
+                            'description': event_data.get('description', 'N/A'),
+                            'location': event_data.get('location', {}).get('name', 'N/A'),
+                            'address': event_data.get('location', {}).get('address', {}).get('streetAddress', 'N/A'),
+                            'city': event_data.get('location', {}).get('address', {}).get('addressLocality', 'N/A'),
+                            'region': event_data.get('location', {}).get('address', {}).get('addressRegion', 'N/A')
+                        })
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error parsing JSON-LD: {e}")
 
         logger.debug(f"Scraping completed with {len(events)} events found")
         return events
@@ -179,21 +154,29 @@ class OshkoshScraper(BaseScraper):
         processed_events = []
         for event in data:
             processed_events.append({
-                'title': event['title'],
-                'start_date': event['start_date'],
-                'end_date': event['end_date'],
-                'time': event.get('time', ''),
-                'url': event['url']
+                'title': event['name'],
+                'start_date': event['startDate'],
+                'end_date': event['endDate'],
+                'url': event['url'],
+                'description': event['description'],
+                'location': event['location'],
+                'address': event['address'],
+                'city': event['city'],
+                'region': event['region']
             })
         logger.debug(f"Processed {len(processed_events)} events")
         return processed_events
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Oshkosh Scraper")
+    parser.add_argument("--test-run", action="store_true", help="Fetch only the first 3 events from the first page of links")
+    args = parser.parse_args()
+
     # Example configuration for testing
     config = {
         'url': 'https://www.visitoshkosh.com/events/?bounds=false&view=list&sort=date'
     }
-    scraper = OshkoshScraper(config)
+    scraper = OshkoshScraper(config, test_run=args.test_run)
     events = scraper.scrape()
     processed_events = scraper.process_data(events)
     print("Scraped Events:")

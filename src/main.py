@@ -1,15 +1,15 @@
 import json
 import argparse
 from datetime import datetime
-from .config.config_loader import load_config, load_credentials
-from .scrapers.oshkosh_scraper import OshkoshScraper
-from .scrapers.winnebago_scraper import WinnebagoScraper
-from .database.db_manager import (
+from src.config.config_loader import load_config, load_credentials
+from src.scrapers.oshkosh_scraper import OshkoshScraper
+from src.scrapers.winnebago_scraper import WinnebagoScraper
+from src.database.db_manager import (
     connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id
 )
-from .bluesky.auth import authenticate
-from .bluesky.poster import post_event_to_bluesky
+from src.bluesky.auth import authenticate
+from src.bluesky.poster import post_event_to_bluesky
 
 def main():
     # Load configuration
@@ -38,8 +38,22 @@ def main():
         # Scrape events
         events = scraper.scrape()
         for event in events:
-            event_id = add_event(connection, event['url'], event['date'], account_username, website['name'], website['hashtags'])
-            post_timings = calculate_post_timings(event['date'])
+            event_id = add_event(
+                connection,
+                event['title'],
+                event['start_date'],
+                event['end_date'],
+                event['url'],
+                event['description'],
+                event['location'],
+                event['address'],
+                event['city'],
+                event['region'],
+                account_username,
+                website['name'],
+                website['hashtags']
+            )
+            post_timings = calculate_post_timings(event['start_date'])
             store_post_timings(connection, event_id, post_timings, account_username)
 
     # Check for due posts
