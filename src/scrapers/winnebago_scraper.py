@@ -19,12 +19,13 @@ logger = logging.getLogger(__name__)
 class WinnebagoScraper(BaseScraper):
     def __init__(self, config):
         super().__init__(config)
+        self.base_url = config['url']
 
     def scrape(self):
         events = []
         page = 0
         while True:
-            url = f"{self.config['url']}?page={page}"
+            url = f"{self.base_url}?page={page}"
             logger.debug(f"Scraping URL: {url}")
             response = requests.get(url)
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -41,7 +42,7 @@ class WinnebagoScraper(BaseScraper):
                 if title_element and date_elements:
                     title = title_element.get_text(strip=True)
                     relative_url = title_element['href']
-                    full_url = base_url + relative_url
+                    full_url = self.base_url + relative_url
                     for date_element in date_elements:
                         date_str = date_element.get_text(strip=True)
                         try:
