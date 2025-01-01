@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 def post_event_to_bluesky(event_data, account_info):
     """
     Posts an event to Bluesky using the provided event data and account information.
@@ -13,6 +17,7 @@ def post_event_to_bluesky(event_data, account_info):
     hashtags = event_data.get('hashtags', [])
     post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
     # Use the Bluesky API to post the content
+    logger.info(f"Posting to Bluesky: {post_content}")
     pass
 
 def schedule_posts(events, intervals, account_info):
@@ -40,4 +45,6 @@ def dry_run(event_data):
     Returns:
         None
     """
-    print("Dry run: Event data to be posted:", event_data)
+    hashtags = event_data.get('hashtags', [])
+    post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
+    logger.info(f"Dry run: Event data to be posted: {post_content}")

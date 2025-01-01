@@ -1,5 +1,6 @@
 import json
 import argparse
+import os
 from datetime import datetime
 from src.config.config_loader import load_config, load_credentials
 from src.scrapers.oshkosh_scraper import OshkoshScraper
@@ -9,7 +10,7 @@ from src.database.db_manager import (
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id
 )
 from src.bluesky.auth import authenticate
-from src.bluesky.poster import post_event_to_bluesky
+from src.bluesky.poster import post_event_to_bluesky, dry_run
 
 def main():
     # Load configuration
@@ -61,7 +62,10 @@ def main():
     for post in due_posts:
         event = get_event_by_id(connection, post['event_id'])
         account = next(acc for acc in credentials['accounts'] if acc['username'] == post['account_username'])
-        post_event_to_bluesky(event, account)
+        if os.getenv('PROD'):
+            post_event_to_bluesky(event, account)
+        else:
+            dry_run(event)
         mark_post_as_executed(connection, post['id'])
 
 def dry_run():

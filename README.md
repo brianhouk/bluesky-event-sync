@@ -50,14 +50,15 @@ To avoid storing sensitive credentials in the configuration files, use environme
 
 - `BLUESKY_DISCOVEROSHKOSH_PASSWORD`: The password for the `discoveroshkosh` Bluesky account.
 - `BLUESKY_WISCONSINEVENTS_PASSWORD`: The password for the `wisconsinevents` Bluesky account.
+- `PROD`: Set this variable to `true` to enable posting to Bluesky. If not set, the application will run in dry-run mode and only log the event data.
 
 You can set these environment variables in your shell or in a `.env` file if you are using Docker Compose.
 
 Example:
 ```sh
-
 export BLUESKY_DISCOVEROSHKOSH_PASSWORD=your_password_for_discoveroshkosh
 export BLUESKY_WISCONSINEVENTS_PASSWORD=your_password_for_wisconsinevents
+export PROD=true
 ```
 
 ## Running the Application
