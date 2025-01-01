@@ -10,6 +10,10 @@ services:
     command: python src/main.py
     depends_on:
       - db
+    environment:
+      - DATABASE_URL=sqlite:///app/database/events.db
+      - BLUESKY_DISCOVEROSHKOSH_PASSWORD=${BLUESKY_DISCOVEROSHKOSH_PASSWORD}
+      - BLUESKY_WISCONSINEVENTS_PASSWORD=${BLUESKY_WISCONSINEVENTS_PASSWORD}
 
   db:
     image: nouchka/sqlite3
