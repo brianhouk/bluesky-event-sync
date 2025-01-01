@@ -1,6 +1,7 @@
-requests
-beautifulsoup4
-sqlalchemy
+requests==2.25.1
+beautifulsoup4==4.9.3
+sqlalchemy==1.4.15
 docker
 atproto
 feedparser
+selenium==3.141.0

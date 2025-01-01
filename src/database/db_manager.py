@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 import sqlite3
+import os
 
 def connect_to_db(db_path):
-    import sqlite3
+    if not os.path.exists(os.path.dirname(db_path)):
+        os.makedirs(os.path.dirname(db_path))
     connection = sqlite3.connect(db_path)
     return connection
 
