@@ -1,3 +1,4 @@
+import logging
 import json
 import argparse
 import os
@@ -12,7 +13,19 @@ from src.database.db_manager import (
 from src.bluesky.auth import authenticate
 from src.bluesky.poster import post_event_to_bluesky, dry_run
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('bluesky-event-sync.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
 def main():
+    logger.info("Starting Bluesky Event Publisher")
     # Load configuration
     config = load_config('config/config.json')
     credentials = load_credentials()

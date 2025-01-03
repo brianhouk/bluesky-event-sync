@@ -1,4 +1,4 @@
 .env
-*.log
+bluesky-event-sync.log
 *.pyc
 session.txt

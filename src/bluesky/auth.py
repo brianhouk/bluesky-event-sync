@@ -2,6 +2,15 @@ import logging
 from typing import Optional
 from atproto_client import Client, Session, SessionEvent
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('bluesky-event-sync.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def get_session() -> Optional[str]:

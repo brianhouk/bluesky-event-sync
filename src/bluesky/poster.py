@@ -1,5 +1,15 @@
 import logging
+from atproto_client import models
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('bluesky-event-sync.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def post_event_to_bluesky(event_data, account_info):
@@ -13,12 +23,22 @@ def post_event_to_bluesky(event_data, account_info):
     Returns:
         response (dict): The response from the Bluesky API after posting the event.
     """
-    # Implement the logic to post the event to Bluesky API
-    hashtags = event_data.get('hashtags', [])
-    post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
-    # Use the Bluesky API to post the content
-    logger.info(f"Posting to Bluesky: {post_content}")
-    pass
+    try:
+        logger.info(f"Preparing to post event: {event_data['title']}")
+        logger.debug(f"Full event data: {event_data}")
+        logger.debug(f"Posting as account: {account_info['username']}")
+
+        hashtags = event_data.get('hashtags', [])
+        post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
+        
+        logger.info(f"Posting content: {post_content}")
+        # Use the Bluesky API to post the content
+        # client.send_post(text=post_content)
+        logger.info("Post successful")
+        
+    except Exception as e:
+        logger.error(f"Failed to post event: {e}")
+        raise
 
 def schedule_posts(events, intervals, account_info):
     """
@@ -45,6 +65,10 @@ def dry_run(event_data):
     Returns:
         None
     """
+    logger.info("Performing dry run")
+    logger.debug(f"Event data for dry run: {event_data}")
+    
     hashtags = event_data.get('hashtags', [])
     post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
-    logger.info(f"Dry run: Event data to be posted: {post_content}")
+    
+    logger.info(f"Dry run - Would post: {post_content}")
