@@ -43,9 +43,16 @@ class OshkoshScraper(BaseScraper):
     def initialize_driver(self):
         logger.info("initialize_driver: Setting up Chrome options")
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
+        #https://stackoverflow.com/questions/48450594/selenium-timed-out-receiving-message-from-renderer
+        #// ChromeDriver is just AWFUL because every version or two it breaks unless you pass cryptic arguments
+        #//AGRESSIVE: options.setPageLoadStrategy(PageLoadStrategy.NONE); // https://www.skptricks.com/2018/08/timed-out-receiving-message-from-renderer-selenium.html
+        options.add_argument("start-maximized")#; // https://stackoverflow.com/a/26283818/1689770
+        options.add_argument("enable-automation")#; // https://stackoverflow.com/a/43840128/1689770
+        options.add_argument("--headless")#; // only if you are ACTUALLY running headless
+        options.add_argument("--no-sandbox")#; //https://stackoverflow.com/a/50725918/1689770
+        options.add_argument("--disable-dev-shm-usage")#; //https://stackoverflow.com/a/50725918/1689770
+        options.add_argument("--disable-browser-side-navigation")#; //https://stackoverflow.com/a/49123152/1689770
+        options.add_argument("--disable-gpu")#; //https://stackoverflow.com/questions/51959986/how-to-solve-selenium-chromedriver-timed-out-receiving-message-from-renderer-exc
         logger.info("initialize_driver: Creating Chrome driver")
         try:
             driver = webdriver.Chrome(options=options)
@@ -136,6 +143,36 @@ class OshkoshScraper(BaseScraper):
         logger.info(f"scrape_all_event_links: Complete. Total links found: {len(all_links)}")
         return all_links
 
+    def extract_event_details(self, soup):
+        logger.info("extract_event_details: Extracting event details")
+        try:
+            title = soup.select_one('.event-title').get_text(strip=True)
+            start_date = soup.select_one('.event-start-date').get_text(strip=True)
+            end_date = soup.select_one('.event-end-date').get_text(strip=True)
+            url = soup.select_one('.event-url')['href']
+            description = soup.select_one('.event-description').get_text(strip=True)
+            location = soup.select_one('.event-location').get_text(strip=True)
+            address = soup.select_one('.event-address').get_text(strip=True)
+            city = soup.select_one('.event-city').get_text(strip=True)
+            region = soup.select_one('.event-region').get_text(strip=True)
+            
+            event = {
+                'title': title,
+                'start_date': datetime.strptime(start_date, '%A, %B %d, %Y - %H:%M'),
+                'end_date': datetime.strptime(end_date, '%A, %B %d, %Y - %H:%M'),
+                'url': url,
+                'description': description,
+                'location': location,
+                'address': address,
+                'city': city,
+                'region': region
+            }
+            logger.info(f"extract_event_details: Extracted event: {event}")
+            return event
+        except Exception as e:
+            logger.error(f"extract_event_details: Error extracting event details: {e}", exc_info=True)
+            return None
+
     def scrape(self):
         base_url = "https://www.visitoshkosh.com"
         start_url = self.config['url']
@@ -154,17 +191,19 @@ class OshkoshScraper(BaseScraper):
                     event_data = json.loads(json_ld.string)
                     if event_data.get('@type') == 'Event':
                         logger.debug(f"Extracted JSON-LD: {event_data}")
-                        events.append({
-                            'name': event_data.get('name', 'N/A'),
-                            'startDate': event_data.get('startDate', 'N/A'),
-                            'endDate': event_data.get('endDate', 'N/A'),
+                        event = {
+                            'title': event_data.get('name', 'N/A'),
+                            'start_date': event_data.get('startDate', 'N/A'),
+                            'end_date': event_data.get('endDate', 'N/A'),
                             'url': link,
                             'description': event_data.get('description', 'N/A'),
                             'location': event_data.get('location', {}).get('name', 'N/A'),
                             'address': event_data.get('location', {}).get('address', {}).get('streetAddress', 'N/A'),
                             'city': event_data.get('location', {}).get('address', {}).get('addressLocality', 'N/A'),
                             'region': event_data.get('location', {}).get('address', {}).get('addressRegion', 'N/A')
-                        })
+                        }
+                        logger.info(f"Scraped event: {event}")
+                        events.append(event)
                 except json.JSONDecodeError as e:
                     logger.error(f"Error parsing JSON-LD: {e}")
 
@@ -172,22 +211,33 @@ class OshkoshScraper(BaseScraper):
         return events
 
     def process_data(self, data):
-        # Implement the logic to process the scraped data
+        logger.info("process_data: Starting data processing")
         processed_events = []
-        for event in data:
-            processed_events.append({
-                'title': event['name'],
-                'start_date': event['startDate'],
-                'end_date': event['endDate'],
-                'url': event['url'],
-                'description': event['description'],
-                'location': event['location'],
-                'address': event['address'],
-                'city': event['city'],
-                'region': event['region']
-            })
-        logger.debug(f"Processed {len(processed_events)} events")
-        return processed_events
+        try:
+            for event in data:
+                logger.debug(f"process_data: Processing event: {event}")
+                if isinstance(event, dict):
+                    if 'title' in event:
+                        processed_events.append({
+                            'title': event.get('title', ''),
+                            'start_date': event.get('start_date', '').isoformat(),
+                            'end_date': event.get('end_date', '').isoformat(),
+                            'url': event.get('url', ''),
+                            'description': event.get('description', ''),
+                            'location': event.get('location', ''),
+                            'address': event.get('address', ''),
+                            'city': event.get('city', ''),
+                            'region': event.get('region', '')
+                        })
+                    else:
+                        logger.error(f"process_data: Missing 'title' in event: {event}")
+                else:
+                    logger.error(f"process_data: Invalid event format: {event}")
+            logger.info("process_data: Data processing complete")
+            return processed_events
+        except Exception as e:
+            logger.error(f"process_data: Error during data processing: {e}", exc_info=True)
+            raise
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Oshkosh Scraper")

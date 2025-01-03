@@ -53,6 +53,7 @@ def main():
             # Scrape events
             events = scraper.scrape()
             for event in events:
+                logger.info(f"Processing event: {event}")
                 event_id = add_event(
                     connection,
                     event['title'],
@@ -68,8 +69,11 @@ def main():
                     website['name'],
                     website['hashtags']
                 )
-                post_timings = calculate_post_timings(datetime.fromisoformat(event['start_date']))
-                store_post_timings(connection, event_id, post_timings, account_username)
+                if event_id is not None:
+                    post_timings = calculate_post_timings(datetime.fromisoformat(event['start_date']))
+                    store_post_timings(connection, event_id, post_timings, account_username)
+                else:
+                    logger.error(f"Failed to add event: {event['title']}")
 
         # Check for due posts
         due_posts = get_due_posts(connection)

@@ -75,8 +75,15 @@ def add_event(connection, title, start_date, end_date, url, description, locatio
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (title, start_date.isoformat(), end_date.isoformat(), url, description, location, address, city, region, False, account_username, config_name, ','.join(hashtags)))
         connection.commit()
-    except sqlite3.IntegrityError:
-        logger.error(f"Event '{title}' already exists in the database.")
+        event_id = cursor.lastrowid
+        logger.info(f"Event added with ID: {event_id}")
+        return event_id
+    except sqlite3.IntegrityError as e:
+        logger.error(f"Event '{title}' already exists in the database: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to add event '{title}': {e}")
+        return None
 
 def get_events(connection):
     cursor = connection.cursor()
