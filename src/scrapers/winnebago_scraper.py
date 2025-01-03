@@ -25,20 +25,26 @@ logger = logging.getLogger(__name__)
 
 class WinnebagoScraper(BaseScraper):
     def __init__(self, config):
+        logger.info("WinnebagoScraper.__init__: Initializing scraper")
         super().__init__(config)
         self.base_url = config['url']
+        logger.info("WinnebagoScraper.__init__: Initialization complete")
 
     def scrape(self):
+        logger.info("scrape: Starting scrape operation")
         events = []
         page = 0
         while True:
             url = f"{self.base_url}?page={page}"
+            logger.info(f"scrape: Fetching URL: {url}")
             response = requests.get(url)
             soup = BeautifulSoup(response.content, 'html.parser')
 
             event_elements = soup.select('.views-row')
+            logger.info(f"scrape: Found {len(event_elements)} event elements on page {page}")
 
             if not event_elements:
+                logger.info("scrape: No more event elements found, ending scrape")
                 break
 
             for event_element in event_elements:
@@ -53,24 +59,26 @@ class WinnebagoScraper(BaseScraper):
                         try:
                             date = datetime.strptime(date_str, '%A, %B %d, %Y - %H:%M')
                         except ValueError as e:
+                            logger.warning(f"scrape: Date parsing failed for {date_str}: {e}")
                             continue
-                        # Check if the event already exists
                         existing_event = next((event for event in events if event['title'] == title and event['url'] == full_url), None)
                         if existing_event:
-                            # Update the end date if the new date is later
                             if date > existing_event['end_date']:
                                 existing_event['end_date'] = date
+                                logger.info(f"scrape: Updated end date for event {title}")
                         else:
-                            # Add a new event with start and end date
                             events.append({
                                 'title': title,
                                 'start_date': date,
                                 'end_date': date,
                                 'url': full_url
                             })
+                            logger.info(f"scrape: Added new event {title}")
 
             page += 1
+            logger.info(f"scrape: Moving to next page {page}")
 
+        logger.info(f"scrape: Completed with {len(events)} events found")
         return events
 
     def process_data(self, data):

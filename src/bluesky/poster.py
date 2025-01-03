@@ -23,6 +23,7 @@ def post_event_to_bluesky(event_data, account_info):
     Returns:
         response (dict): The response from the Bluesky API after posting the event.
     """
+    logger.info(f"post_event_to_bluesky: Starting for {account_info['username']}")
     try:
         logger.info(f"Preparing to post event: {event_data['title']}")
         logger.debug(f"Full event data: {event_data}")
@@ -37,7 +38,7 @@ def post_event_to_bluesky(event_data, account_info):
         logger.info("Post successful")
         
     except Exception as e:
-        logger.error(f"Failed to post event: {e}")
+        logger.error(f"post_event_to_bluesky: Failed: {e}")
         raise
 
 def schedule_posts(events, intervals, account_info):

@@ -15,10 +15,14 @@ logger = logging.getLogger(__name__)
 
 def load_config(config_path):
     """Load configuration from JSON file"""
-    logger.info(f"Loading configuration from {config_path}")
-    with open(config_path, 'r') as config_file:
-        config = json.load(config_file)
-    return config
+    logger.info(f"load_config: Loading from {config_path}")
+    try:
+        with open(config_path, 'r') as config_file:
+            config = json.load(config_file)
+        return config
+    except Exception as e:
+        logger.error(f"load_config: Failed: {e}")
+        raise
 
 def load_credentials():
     """Load credentials from environment variables based on usernames in config"""

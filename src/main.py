@@ -25,61 +25,65 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def main():
-    logger.info("Starting Bluesky Event Publisher")
-    # Load configuration
-    config = load_config('config/config.json')
-    credentials = load_credentials()
-    
-    # Initialize database
-    connection = connect_to_db('database/events.db')
-    create_event_table(connection)
-    create_publication_schedule_table(connection)
-
-    # Authenticate with Bluesky
-    for account in credentials['accounts']:
-        auth_token = authenticate(account['username'], account['password'])
-        account['auth_token'] = auth_token
-
-    # Initialize scraper
-    for website in config['websites']:
-        account_username = website['account_username']
-        account = next(acc for acc in credentials['accounts'] if acc['username'] == account_username)
-        if website['name'] == 'OshkoshEvents':
-            scraper = OshkoshScraper(website)
-        elif website['name'] == 'WinnebagoEvents':
-            scraper = WinnebagoScraper(website)
+    logger.info("main: Starting Bluesky Event Publisher")
+    try:
+        # Load configuration
+        config = load_config('config/config.json')
+        credentials = load_credentials()
         
-        # Scrape events
-        events = scraper.scrape()
-        for event in events:
-            event_id = add_event(
-                connection,
-                event['title'],
-                datetime.fromisoformat(event['start_date']),
-                datetime.fromisoformat(event['end_date']),
-                event['url'],
-                event['description'],
-                event['location'],
-                event['address'],
-                event['city'],
-                event['region'],
-                account_username,
-                website['name'],
-                website['hashtags']
-            )
-            post_timings = calculate_post_timings(datetime.fromisoformat(event['start_date']))
-            store_post_timings(connection, event_id, post_timings, account_username)
+        # Initialize database
+        connection = connect_to_db('database/events.db')
+        create_event_table(connection)
+        create_publication_schedule_table(connection)
 
-    # Check for due posts
-    due_posts = get_due_posts(connection)
-    for post in due_posts:
-        event = get_event_by_id(connection, post['event_id'])
-        account = next(acc for acc in credentials['accounts'] if acc['username'] == post['account_username'])
-        if os.getenv('PROD'):
-            post_event_to_bluesky(event, account)
-        else:
-            dry_run(event)
-        mark_post_as_executed(connection, post['id'])
+        # Authenticate with Bluesky
+        for account in credentials['accounts']:
+            auth_token = authenticate(account['username'], account['password'])
+            account['auth_token'] = auth_token
+
+        # Initialize scraper
+        for website in config['websites']:
+            account_username = website['account_username']
+            account = next(acc for acc in credentials['accounts'] if acc['username'] == account_username)
+            if website['name'] == 'OshkoshEvents':
+                scraper = OshkoshScraper(website)
+            elif website['name'] == 'WinnebagoEvents':
+                scraper = WinnebagoScraper(website)
+            
+            # Scrape events
+            events = scraper.scrape()
+            for event in events:
+                event_id = add_event(
+                    connection,
+                    event['title'],
+                    datetime.fromisoformat(event['start_date']),
+                    datetime.fromisoformat(event['end_date']),
+                    event['url'],
+                    event['description'],
+                    event['location'],
+                    event['address'],
+                    event['city'],
+                    event['region'],
+                    account_username,
+                    website['name'],
+                    website['hashtags']
+                )
+                post_timings = calculate_post_timings(datetime.fromisoformat(event['start_date']))
+                store_post_timings(connection, event_id, post_timings, account_username)
+
+        # Check for due posts
+        due_posts = get_due_posts(connection)
+        for post in due_posts:
+            event = get_event_by_id(connection, post['event_id'])
+            account = next(acc for acc in credentials['accounts'] if acc['username'] == post['account_username'])
+            if os.getenv('PROD'):
+                post_event_to_bluesky(event, account)
+            else:
+                dry_run(event)
+            mark_post_as_executed(connection, post['id'])
+    except Exception as e:
+        logger.error(f"main: Failed: {e}")
+        raise
 
 def dry_run():
     # Load configuration

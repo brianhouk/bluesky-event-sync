@@ -15,13 +15,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def connect_to_db(db_path):
-    """Connect to SQLite database, creating directory if needed"""
-    if not os.path.exists(os.path.dirname(db_path)):
-        logger.info(f"Creating database directory: {os.path.dirname(db_path)}")
-        os.makedirs(os.path.dirname(db_path))
-    logger.info(f"Connecting to database: {db_path}")
-    connection = sqlite3.connect(db_path)
-    return connection
+    logger.info(f"connect_to_db: Connecting to {db_path}")
+    try:
+        if not os.path.exists(os.path.dirname(db_path)):
+            logger.info(f"Creating database directory: {os.path.dirname(db_path)}")
+            os.makedirs(os.path.dirname(db_path))
+        logger.info(f"Connecting to database: {db_path}")
+        connection = sqlite3.connect(db_path)
+        return connection
+    except Exception as e:
+        logger.error(f"connect_to_db: Failed: {e}")
+        raise
 
 def create_event_table(connection):
     cursor = connection.cursor()

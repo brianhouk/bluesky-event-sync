@@ -44,19 +44,25 @@ def authenticate(username: str, password: str) -> Client:
     Returns:
         Client: Authenticated Bluesky client
     """
-    client = Client()
-    client.on_session_change(on_session_change)
+    logger.info(f"authenticate: Starting for {username}")
+    try:
+        client = Client()
+        logger.info("authenticate: Client created")
+        client.on_session_change(on_session_change)
 
-    session_string = get_session()
-    if session_string:
-        logger.info('Reusing existing session')
-        try:
-            client.login(session_string=session_string)
-        except Exception as e:
-            logger.info(f'Session reuse failed: {e}. Creating new session.')
+        session_string = get_session()
+        if session_string:
+            logger.info('Reusing existing session')
+            try:
+                client.login(session_string=session_string)
+            except Exception as e:
+                logger.info(f'Session reuse failed: {e}. Creating new session.')
+                client.login(username, password)
+        else:
+            logger.info('Creating new session')
             client.login(username, password)
-    else:
-        logger.info('Creating new session')
-        client.login(username, password)
 
-    return client
+        return client
+    except Exception as e:
+        logger.error(f"authenticate: Failed: {e}")
+        raise
