@@ -3,9 +3,9 @@ import json
 import argparse
 import os
 from datetime import datetime
-from src.config.config_loader import load_config, load_credentials
-from src.scrapers.oshkosh_scraper import OshkoshScraper
-from src.scrapers.winnebago_scraper import WinnebagoScraper
+from config.config_loader import load_config, load_credentials
+from scrapers.oshkosh_scraper import OshkoshScraper
+from scrapers.winnebago_scraper import WinnebagoScraper
 from src.database.db_manager import (
     connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id

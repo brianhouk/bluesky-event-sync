@@ -4,4 +4,4 @@ sqlalchemy==1.4.15
 docker
 atproto
 feedparser
-selenium==3.141.0
+selenium==4.15.2
