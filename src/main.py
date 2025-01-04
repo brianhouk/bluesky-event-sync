@@ -24,22 +24,29 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def parse_date_string(date_str):
-    """Convert date string to ISO format"""
-    logger.debug(f"Parsing date string: {date_str}")
+def parse_date_string(date_input):
+    """Convert date string or datetime to ISO format"""
+    logger.debug(f"Parsing date input: {date_input} of type {type(date_input)}")
+    
+    # If already a datetime object, return as-is
+    if isinstance(date_input, datetime):
+        logger.debug(f"Input is already datetime object")
+        return date_input
+        
+    # Otherwise parse the string
     try:
-        # Parse the date string in the format "Friday, January 3, 2025 5:30 PM"
-        dt = datetime.strptime(date_str, "%A, %B %d, %Y %I:%M %p")
+        # Parse string in format "Friday, January 3, 2025 5:30 PM"
+        dt = datetime.strptime(date_input, "%A, %B %d, %Y %I:%M %p")
         logger.debug(f"Successfully parsed date: {dt}")
         return dt
     except ValueError:
         try:
-            # Try alternate format "January 3, 2025" if time is not included
-            dt = datetime.strptime(date_str, "%B %d, %Y")
+            # Try alternate format without time
+            dt = datetime.strptime(date_input, "%B %d, %Y")
             logger.debug(f"Successfully parsed date (no time): {dt}")
             return dt
         except ValueError:
-            logger.error(f"Failed to parse date string: {date_str}")
+            logger.error(f"Failed to parse date string: {date_input}")
             raise
 
 def main():
@@ -104,12 +111,17 @@ def main():
         due_posts = get_due_posts(connection)
         for post in due_posts:
             event = get_event_by_id(connection, post['event_id'])
-            account = next(acc for acc in credentials['accounts'] if acc['username'] == post['account_username'])
-            if os.getenv('PROD'):
-                post_event_to_bluesky(event, account)
+            if event:
+                account = next(acc for acc in credentials['accounts'] 
+                             if acc['username'] == post['account_username'])
+                if os.getenv('PROD'):
+                    post_event_to_bluesky(event, account)
+                else:
+                    dry_run(event)
+                mark_post_as_executed(connection, post['id'])
             else:
-                dry_run(event)
-            mark_post_as_executed(connection, post['id'])
+                logger.error(f"Could not find event for post ID: {post['id']}")
+
     except Exception as e:
         logger.error(f"main: Failed: {e}")
         raise
@@ -124,7 +136,6 @@ def dry_run():
             scraper = OshkoshScraper(website)
         elif website['name'] == 'WinnebagoEvents':
             scraper = WinnebagoScraper(website)
-        
         # Scrape events
         events = scraper.scrape()
         processed_events = scraper.process_data(events)

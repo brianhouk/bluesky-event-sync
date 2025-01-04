@@ -127,9 +127,25 @@ def update_event_status(connection, event_id, published):
     connection.commit()
 
 def get_event_by_id(connection, event_id):
+    """Get event by ID and return as dictionary"""
     cursor = connection.cursor()
+    logger.info(f"Fetching event with ID: {event_id}")
+    
+    # Get column names from the events table
+    cursor.execute('PRAGMA table_info(events)')
+    columns = [column[1] for column in cursor.fetchall()]
+    
     cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
-    return cursor.fetchone()
+    row = cursor.fetchone()
+    
+    if row:
+        # Convert tuple to dictionary with column names
+        event_dict = dict(zip(columns, row))
+        logger.info(f"Found event: {event_dict['title']}")
+        return event_dict
+    
+    logger.warning(f"No event found with ID: {event_id}")
+    return None
 
 def calculate_post_timings(event_date):
     intervals = [
@@ -153,13 +169,26 @@ def store_post_timings(connection, event_id, post_timings, account_username):
     connection.commit()
 
 def get_due_posts(connection):
+    """Fetch all due posts and return them as dictionaries"""
     cursor = connection.cursor()
     logger.info("Fetching due posts")
+    
+    # Get column names from the publication_schedule table
+    cursor.execute('PRAGMA table_info(publication_schedule)')
+    columns = [column[1] for column in cursor.fetchall()]
+    
     cursor.execute('''
         SELECT * FROM publication_schedule
         WHERE scheduled_time <= ? AND is_executed = ?
     ''', (datetime.now().isoformat(), False))
-    return cursor.fetchall()
+    
+    # Convert tuples to dictionaries with column names
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(zip(columns, row)))
+    
+    logger.info(f"Found {len(results)} due posts")
+    return results
 
 def mark_post_as_executed(connection, schedule_id):
     cursor = connection.cursor()
