@@ -24,6 +24,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def parse_date_string(date_str):
+    """Convert date string to ISO format"""
+    logger.debug(f"Parsing date string: {date_str}")
+    try:
+        # Parse the date string in the format "Friday, January 3, 2025 5:30 PM"
+        dt = datetime.strptime(date_str, "%A, %B %d, %Y %I:%M %p")
+        logger.debug(f"Successfully parsed date: {dt}")
+        return dt
+    except ValueError:
+        try:
+            # Try alternate format "January 3, 2025" if time is not included
+            dt = datetime.strptime(date_str, "%B %d, %Y")
+            logger.debug(f"Successfully parsed date (no time): {dt}")
+            return dt
+        except ValueError:
+            logger.error(f"Failed to parse date string: {date_str}")
+            raise
+
 def main():
     logger.info("main: Starting Bluesky Event Publisher")
     try:
@@ -54,26 +72,33 @@ def main():
             events = scraper.scrape()
             for event in events:
                 logger.info(f"Processing event: {event}")
-                event_id = add_event(
-                    connection,
-                    event['title'],
-                    datetime.fromisoformat(event['start_date']),
-                    datetime.fromisoformat(event['end_date']),
-                    event['url'],
-                    event['description'],
-                    event['location'],
-                    event['address'],
-                    event['city'],
-                    event['region'],
-                    account_username,
-                    website['name'],
-                    website['hashtags']
-                )
-                if event_id is not None:
-                    post_timings = calculate_post_timings(datetime.fromisoformat(event['start_date']))
-                    store_post_timings(connection, event_id, post_timings, account_username)
-                else:
-                    logger.error(f"Failed to add event: {event['title']}")
+                try:
+                    start_date = parse_date_string(event['start_date'])
+                    end_date = parse_date_string(event['end_date']) if event['end_date'] != 'N/A' else start_date
+                    
+                    event_id = add_event(
+                        connection,
+                        event['title'],
+                        start_date,
+                        end_date,
+                        event['url'],
+                        event['description'],
+                        event['location'],
+                        event['address'],
+                        event['city'],
+                        event['region'],
+                        account_username,
+                        website['name'],
+                        website['hashtags']
+                    )
+                    if event_id is not None:
+                        post_timings = calculate_post_timings(start_date)
+                        store_post_timings(connection, event_id, post_timings, account_username)
+                    else:
+                        logger.error(f"Failed to add event: {event['title']}")
+                except ValueError as e:
+                    logger.error(f"Date parsing error for event {event['title']}: {e}")
+                    continue
 
         # Check for due posts
         due_posts = get_due_posts(connection)

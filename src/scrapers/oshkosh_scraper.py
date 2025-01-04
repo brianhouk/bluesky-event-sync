@@ -146,31 +146,38 @@ class OshkoshScraper(BaseScraper):
     def extract_event_details(self, soup):
         logger.info("extract_event_details: Extracting event details")
         try:
-            title = soup.select_one('.event-title').get_text(strip=True)
-            start_date = soup.select_one('.event-start-date').get_text(strip=True)
-            end_date = soup.select_one('.event-end-date').get_text(strip=True)
-            url = soup.select_one('.event-url')['href']
-            description = soup.select_one('.event-description').get_text(strip=True)
-            location = soup.select_one('.event-location').get_text(strip=True)
-            address = soup.select_one('.event-address').get_text(strip=True)
-            city = soup.select_one('.event-city').get_text(strip=True)
-            region = soup.select_one('.event-region').get_text(strip=True)
-            
-            event = {
-                'title': title,
-                'start_date': datetime.strptime(start_date, '%A, %B %d, %Y - %H:%M'),
-                'end_date': datetime.strptime(end_date, '%A, %B %d, %Y - %H:%M'),
-                'url': url,
-                'description': description,
-                'location': location,
-                'address': address,
-                'city': city,
-                'region': region
-            }
-            logger.info(f"extract_event_details: Extracted event: {event}")
-            return event
+            # Find the JSON-LD script tag
+            json_ld = soup.find('script', type='application/ld+json')
+            if json_ld:
+                event_data = json.loads(json_ld.string)
+                if event_data.get('@type') == 'Event':
+                    # Parse start and end dates
+                    start_date = datetime.strptime(event_data.get('startDate', ''), '%A, %B %d, %Y %I:%M %p')
+                    end_date = start_date  # Default to start_date
+                    
+                    if event_data.get('endDate'):
+                        try:
+                            end_date = datetime.strptime(event_data.get('endDate'), '%A, %B %d, %Y %I:%M %p')
+                        except ValueError:
+                            logger.warning(f"Could not parse end date, using start date")
+                    
+                    event = {
+                        'title': event_data.get('title', ''),
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'url': event_data.get('url', ''),
+                        'description': event_data.get('description', ''),
+                        'location': event_data.get('location', {}).get('name', ''),
+                        'address': event_data.get('location', {}).get('address', {}).get('streetAddress', ''),
+                        'city': event_data.get('location', {}).get('address', {}).get('addressLocality', ''),
+                        'region': event_data.get('location', {}).get('address', {}).get('addressRegion', '')
+                    }
+                    
+                    logger.info(f"Extracted event: {event['title']} from {event['start_date']} to {event['end_date']}")
+                    return event
+                
         except Exception as e:
-            logger.error(f"extract_event_details: Error extracting event details: {e}", exc_info=True)
+            logger.error(f"Error extracting event details: {e}", exc_info=True)
             return None
 
     def scrape(self):
@@ -184,6 +191,29 @@ class OshkoshScraper(BaseScraper):
             response = requests.get(link)
             soup = BeautifulSoup(response.content, 'html.parser')
 
+            # First extract date/time from JavaScript variables
+            start_date = None
+            end_date = None
+            
+            # Find all script tags
+            scripts = soup.find_all('script')
+            for script in scripts:
+                if script.string and 'var startDate' in script.string:
+                    logger.debug("Found script with date variables")
+                    try:
+                        # Extract start and end dates using regex
+                        start_match = re.search(r'var startDate = "([^"]+)"', script.string)
+                        end_match = re.search(r'var endDate = "([^"]+)"', script.string)
+                        
+                        if start_match:
+                            start_date = start_match.group(1)
+                            logger.debug(f"Found start date: {start_date}")
+                        if end_match:
+                            end_date = end_match.group(1)
+                            logger.debug(f"Found end date: {end_date}")
+                    except Exception as e:
+                        logger.error(f"Error extracting dates from script: {e}")
+
             # Extract structured data in JSON-LD format
             json_ld = soup.find('script', type='application/ld+json')
             if json_ld:
@@ -193,8 +223,8 @@ class OshkoshScraper(BaseScraper):
                         logger.debug(f"Extracted JSON-LD: {event_data}")
                         event = {
                             'title': event_data.get('name', 'N/A'),
-                            'start_date': event_data.get('startDate', 'N/A'),
-                            'end_date': event_data.get('endDate', 'N/A'),
+                            'start_date': start_date or event_data.get('startDate', 'N/A'),
+                            'end_date': end_date or event_data.get('endDate', 'N/A'),
                             'url': link,
                             'description': event_data.get('description', 'N/A'),
                             'location': event_data.get('location', {}).get('name', 'N/A'),

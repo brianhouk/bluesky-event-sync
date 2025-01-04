@@ -66,20 +66,45 @@ def create_publication_schedule_table(connection):
     ''')
     connection.commit()
 
+def check_event_exists(connection, title, start_date, url):
+    """Check if an event already exists in the database"""
+    cursor = connection.cursor()
+    logger.info(f"Checking for existing event: {title} on {start_date}")
+    cursor.execute('''
+        SELECT id FROM events 
+        WHERE title = ? AND start_date = ? AND url = ?
+    ''', (title, start_date.isoformat(), url))
+    result = cursor.fetchone()
+    return result[0] if result else None
+
 def add_event(connection, title, start_date, end_date, url, description, location, address, city, region, account_username, config_name, hashtags):
     cursor = connection.cursor()
     try:
-        logger.info(f"Adding event: {title}")
+        # First check if event already exists
+        existing_event_id = check_event_exists(connection, title, start_date, url)
+        if existing_event_id:
+            logger.info(f"Event already exists with ID {existing_event_id}: {title}")
+            return existing_event_id
+
+        logger.info(f"Adding new event: {title}")
         cursor.execute('''
-            INSERT INTO events (title, start_date, end_date, url, description, location, address, city, region, published, account_username, config_name, hashtags)
+            INSERT INTO events (
+                title, start_date, end_date, url, description, 
+                location, address, city, region, published, 
+                account_username, config_name, hashtags
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (title, start_date.isoformat(), end_date.isoformat(), url, description, location, address, city, region, False, account_username, config_name, ','.join(hashtags)))
+        ''', (
+            title, start_date.isoformat(), end_date.isoformat(), 
+            url, description, location, address, city, region, 
+            False, account_username, config_name, ','.join(hashtags)
+        ))
         connection.commit()
         event_id = cursor.lastrowid
         logger.info(f"Event added with ID: {event_id}")
         return event_id
     except sqlite3.IntegrityError as e:
-        logger.error(f"Event '{title}' already exists in the database: {e}")
+        logger.error(f"Database integrity error for event '{title}': {e}")
         return None
     except Exception as e:
         logger.error(f"Failed to add event '{title}': {e}")
