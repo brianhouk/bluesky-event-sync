@@ -9,7 +9,7 @@ from src.scrapers.winnebago_scraper import WinnebagoScraper
 from src.database.db_manager import (
     connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
     calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id,
-    check_event_exists
+    check_event_exists, dump_all_events
 )
 from src.bluesky.auth import authenticate
 from src.bluesky.poster import post_event_to_bluesky, dry_run
@@ -60,6 +60,8 @@ def dry_run():
     config = load_config('config/config.json')
     connection = connect_to_db('database/events.db')
 
+    all_events = []
+
     # Initialize scraper and process each website
     for website in config['websites']:
         website_stats = {
@@ -98,6 +100,19 @@ def dry_run():
                         'date': start_date.strftime('%Y-%m-%d %H:%M'),
                         'url': event['url']
                     })
+                    all_events.append({
+                        'title': event['title'],
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'url': event['url'],
+                        'description': event['description'],
+                        'location': event['location'],
+                        'address': event['address'],
+                        'city': event['city'],
+                        'region': event['region'],
+                        'account_username': website['account_username'],
+                        'hashtags': website['hashtags']
+                    })
 
                 # Track posts by account
                 account_username = website['account_username']
@@ -119,6 +134,13 @@ def dry_run():
                 continue
 
         stats['websites'][website['name']] = website_stats
+
+    # Sort all events by start date
+    all_events.sort(key=lambda x: x['start_date'])
+
+    # Simulate posting all events in sorted order
+    for event in all_events:
+        logger.info(f"Dry run: Would post event {event['title']} to account {event['account_username']}")
 
     # Print summary
     print("\n=== DRY RUN SUMMARY ===\n")
@@ -148,11 +170,14 @@ def dry_run():
                 print(f"    Post times: {', '.join(post['post_times'])}")
                 print()
 
+    # Dump all events in the database
+    dump_all_events(connection)
+
     print("\nDry run complete!")
     return stats
 
-def main():
-    logger.info("main: Starting Bluesky Event Publisher")
+def post():
+    logger.info("post: Starting posting process")
     try:
         # Load configuration
         config = load_config('config/config.json')
@@ -160,8 +185,6 @@ def main():
         
         # Initialize database
         connection = connect_to_db('database/events.db')
-        create_event_table(connection)
-        create_publication_schedule_table(connection)
 
         # Authenticate with Bluesky
         authenticated_accounts = {}
@@ -171,51 +194,6 @@ def main():
                 'username': account['username'],
                 'auth_token': auth_token
             }
-
-        # Initialize scraper
-        for website in config['websites']:
-            account_username = website['account_username']
-            account = authenticated_accounts.get(account_username)
-            if not account:
-                logger.error(f"No credentials found for account: {account_username}")
-                continue
-
-            if website['name'] == 'OshkoshEvents':
-                scraper = OshkoshScraper(website)
-            elif website['name'] == 'WinnebagoEvents':
-                scraper = WinnebagoScraper(website)
-            
-            # Scrape events
-            events = scraper.scrape()
-            for event in events:
-                logger.info(f"Processing event: {event}")
-                try:
-                    start_date = parse_date_string(event['start_date'])
-                    end_date = parse_date_string(event['end_date']) if event['end_date'] != 'N/A' else start_date
-                    
-                    event_id = add_event(
-                        connection,
-                        event['title'],
-                        start_date,
-                        end_date,
-                        event['url'],
-                        event['description'],
-                        event['location'],
-                        event['address'],
-                        event['city'],
-                        event['region'],
-                        account_username,
-                        website['name'],
-                        website['hashtags']
-                    )
-                    if event_id is not None:
-                        post_timings = calculate_post_timings(start_date)
-                        store_post_timings(connection, event_id, post_timings, account_username)
-                    else:
-                        logger.error(f"Failed to add event: {event['title']}")
-                except ValueError as e:
-                    logger.error(f"Date parsing error for event {event['title']}: {e}")
-                    continue
 
         # Check for due posts
         due_posts = get_due_posts(connection)
@@ -232,12 +210,15 @@ def main():
             else:
                 logger.error(f"Could not find event for post ID: {post['id']}")
 
+        # Dump all events in the database
+        dump_all_events(connection)
+
     except Exception as e:
-        logger.error(f"main: Failed: {e}")
+        logger.error(f"post: Failed: {e}")
         raise
 
 if __name__ == "__main__":
     if os.getenv('PROD') == 'TRUE':
-        main()
+        post()
     else:
         dry_run()

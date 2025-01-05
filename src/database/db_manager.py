@@ -199,3 +199,14 @@ def mark_post_as_executed(connection, schedule_id):
         WHERE id = ?
     ''', (True, schedule_id))
     connection.commit()
+
+def dump_all_events(connection):
+    """Fetch and print all events from the database"""
+    cursor = connection.cursor()
+    cursor.execute('SELECT * FROM events')
+    events = cursor.fetchall()
+    
+    print("\n=== ALL EVENTS IN DATABASE ===\n")
+    for event in events:
+        print(event)
+    print("\n=== END OF EVENTS ===\n")
