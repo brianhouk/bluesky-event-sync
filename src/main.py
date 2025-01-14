@@ -7,12 +7,10 @@ from src.config.config_loader import load_config, load_credentials
 from src.scrapers.oshkosh_scraper import OshkoshScraper
 from src.scrapers.winnebago_scraper import WinnebagoScraper
 from src.database.db_manager import (
-    connect_to_db, create_event_table, create_publication_schedule_table, add_event, get_events,
-    calculate_post_timings, store_post_timings, get_due_posts, mark_post_as_executed, get_event_by_id,
-    check_event_exists, dump_all_events
+    connect_to_db, create_event_table, add_event, check_event_exists, get_postable_events, get_events, dump_all_events
 )
 from src.bluesky.auth import authenticate
-from src.bluesky.poster import post_event_to_bluesky, dry_run
+from src.bluesky.poster import post_event_to_bluesky
 
 # Configure logging
 logging.basicConfig(
@@ -123,11 +121,10 @@ def dry_run():
                     }
                 
                 if not existing_id:
-                    post_timings = calculate_post_timings(start_date)
-                    stats['accounts'][account_username]['total_posts'] += len(post_timings)
+                    stats['accounts'][account_username]['total_posts'] += 1
                     stats['accounts'][account_username]['upcoming_posts'].append({
                         'event': event['title'],
-                        'post_times': [t.strftime('%Y-%m-%d %H:%M') for t in post_timings]
+                        'post_times': [start_date.strftime('%Y-%m-%d %H:%M')]
                     })
             except ValueError as e:
                 logger.error(f"Date parsing error for event {event['title']}: {e}")
@@ -185,6 +182,7 @@ def post():
         
         # Initialize database
         connection = connect_to_db('database/events.db')
+        create_event_table(connection)
 
         # Authenticate with Bluesky
         authenticated_accounts = {}
@@ -195,23 +193,20 @@ def post():
                 'auth_token': auth_token
             }
 
-        # Check for due posts
-        due_posts = get_due_posts(connection)
-        for post in due_posts:
-            event = get_event_by_id(connection, post['event_id'])
-            if event:
-                account = next(acc for acc in credentials['accounts'] 
-                             if acc['username'] == post['account_username'])
+        # Dynamically identify and post events
+        for website in config['websites']:
+            postable = get_postable_events(connection, website)
+            for event in postable:
+                account = authenticated_accounts.get(event['account_username'])
+                if not account:
+                    logger.warning(f"No credentials found for account {event['account_username']}")
+                    continue
+
                 if os.getenv('PROD') == 'TRUE':
                     post_event_to_bluesky(event, account)
+                    # Mark event as published if needed...
                 else:
-                    logger.info(f"Dry run: Would post event {event['title']} to account {account['username']}")
-                mark_post_as_executed(connection, post['id'])
-            else:
-                logger.error(f"Could not find event for post ID: {post['id']}")
-
-        # Dump all events in the database
-        dump_all_events(connection)
+                    logger.info(f"Dry run: Would post {event['title']} to {account['username']}")
 
     except Exception as e:
         logger.error(f"post: Failed: {e}")
