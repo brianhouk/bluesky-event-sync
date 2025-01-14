@@ -47,6 +47,7 @@ def create_event_table(connection):
             account_username TEXT NOT NULL,
             config_name TEXT NOT NULL,
             hashtags TEXT NOT NULL,
+            last_posted TEXT,  -- New column to track last posted timestamp
             UNIQUE(title, start_date, url)
         )
     ''')
@@ -115,7 +116,7 @@ def get_event_by_id(connection, event_id):
     cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
     row = cursor.fetchone()
     
-    if row:
+    if (row):
         # Convert tuple to dictionary with column names
         event_dict = dict(zip(columns, row))
         logger.info(f"Found event: {event_dict['title']}")
@@ -146,12 +147,20 @@ def mark_post_as_executed(connection, schedule_id):
     connection.commit()
 
 def get_postable_events(connection, website_config):
+    """
+    Dynamically identify events that should be posted based on their start date
+    and configured intervals.
+    """
+    logger.info(f"Checking for events to post for {website_config['name']}")
+    cursor = connection.cursor()
+    
     interval_map = {
         "30 days": timedelta(days=30),
         "2 weeks": timedelta(days=14),
         "5 days": timedelta(days=5),
         "1 day": timedelta(days=1)
     }
+    
     now = datetime.now()
     events_to_post = []
 
@@ -163,10 +172,9 @@ def get_postable_events(connection, website_config):
 
     max_interval = max(intervals)
 
-    cursor = connection.cursor()
     cursor.execute('''
         SELECT id, title, start_date, end_date, url, description, location, 
-               address, city, region, published, account_username, hashtags
+               address, city, region, published, account_username, hashtags, last_posted
         FROM events
         WHERE account_username = ?
     ''', (website_config['account_username'],))
@@ -179,6 +187,13 @@ def get_postable_events(connection, website_config):
         # Skip if outside the max interval or event is already past
         if time_until_event <= timedelta(0) or time_until_event > max_interval:
             continue
+
+        # Check if the event has been posted within the interval
+        last_posted = event['last_posted']
+        if last_posted:
+            last_posted = datetime.fromisoformat(last_posted)
+            if now - last_posted <= max_interval:
+                continue
 
         for interval_str in website_config['update_intervals']:
             interval = interval_map.get(interval_str)

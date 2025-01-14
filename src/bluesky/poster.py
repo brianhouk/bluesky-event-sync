@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from atproto_client import models
 
 # Configure logging
@@ -12,13 +13,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def post_event_to_bluesky(event_data, account_info):
+def post_event_to_bluesky(event_data, account_info, connection):
     """
     Posts an event to Bluesky using the provided event data and account information.
     
     Parameters:
         event_data (dict): The data of the event to be posted.
         account_info (dict): The account information for posting to Bluesky.
+        connection: Database connection to update the last_posted timestamp.
     
     Returns:
         response (dict): The response from the Bluesky API after posting the event.
@@ -30,12 +32,21 @@ def post_event_to_bluesky(event_data, account_info):
         logger.debug(f"Posting as account: {account_info['username']}")
 
         hashtags = event_data.get('hashtags', [])
-        post_content = f"{event_data['title']} - {event_data['description']} {' '.join(hashtags)} {event_data['url']}"
+        
+        # Ensure start_date is a datetime object
+        if isinstance(event_data['start_date'], str):
+            logger.debug(f"Parsing start_date from string: {event_data['start_date']}")
+            event_data['start_date'] = datetime.fromisoformat(event_data['start_date'])
+        
+        start_date_str = event_data['start_date'].strftime('%Y-%m-%d %H:%M')
+        logger.debug(f"Formatted start_date_str: {start_date_str}")
+        
+        post_content = f"{event_data['title']} ({start_date_str}) - {event_data['description']} {' '.join(hashtags)} {event_data['url']}"
 
         # Check if post_content exceeds 300 characters
         if len(post_content) > 300:
             logger.warning("Post content exceeds 300 characters, removing description")
-            post_content = f"{event_data['title']} {' '.join(hashtags)} {event_data['url']}"
+            post_content = f"{event_data['title']} ({start_date_str}) {' '.join(hashtags)} {event_data['url']}"
 
         # Ensure post_content is within the limit
         if len(post_content) > 300:
@@ -46,25 +57,19 @@ def post_event_to_bluesky(event_data, account_info):
         # Use the Bluesky API to post the content
         # client.send_post(text=post_content)
         logger.info("Post successful")
+
+        # Update the last_posted timestamp
+        cursor = connection.cursor()
+        cursor.execute('''
+            UPDATE events
+            SET last_posted = ?
+            WHERE id = ?
+        ''', (datetime.now().isoformat(), event_data['id']))
+        connection.commit()
         
     except Exception as e:
         logger.error(f"post_event_to_bluesky: Failed: {e}")
         raise
-
-def schedule_posts(events, intervals, account_info):
-    """
-    Schedules posts for the given events based on the specified intervals.
-    
-    Parameters:
-        events (list): A list of events to be posted.
-        intervals (list): A list of intervals for scheduling posts.
-        account_info (dict): The account information for posting to Bluesky.
-    
-    Returns:
-        None
-    """
-    # Implement the logic to schedule posts
-    pass
 
 def dry_run(event_data):
     """
@@ -80,12 +85,21 @@ def dry_run(event_data):
     logger.debug(f"Event data for dry run: {event_data}")
     
     hashtags = event_data.get('hashtags', [])
-    post_content = f"{event_data['title']} - {event_data['description']} {' '.join(hashtags)} {event_data['url']}"
+    
+    # Ensure start_date is a datetime object
+    if isinstance(event_data['start_date'], str):
+        logger.debug(f"Parsing start_date from string: {event_data['start_date']}")
+        event_data['start_date'] = datetime.fromisoformat(event_data['start_date'])
+    
+    start_date_str = event_data['start_date'].strftime('%Y-%m-%d %H:%M')
+    logger.debug(f"Formatted start_date_str: {start_date_str}")
+    
+    post_content = f"{event_data['title']} ({start_date_str}) - {event_data['description']} {' '.join(hashtags)} {event_data['url']}"
 
     # Check if post_content exceeds 300 characters
     if len(post_content) > 300:
         logger.warning("Post content exceeds 300 characters, removing description")
-        post_content = f"{event_data['title']} {' '.join(hashtags)} {event_data['url']}"
+        post_content = f"{event_data['title']} ({start_date_str}) {' '.join(hashtags)} {event_data['url']}"
 
     # Ensure post_content is within the limit
     if len(post_content) > 300:

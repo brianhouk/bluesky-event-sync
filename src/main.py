@@ -138,7 +138,7 @@ def dry_run():
     # Simulate posting all events in sorted order
     for event in all_events:
         hashtags = event.get('hashtags', [])
-        post_content = f"{event['title']} - {event['description']} {' '.join(hashtags)} {event['url']}"
+        post_content = f"{event['title']} ({event['start_date'].strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
         logger.info(f"Dry run: Would post: {post_content}")
 
     # Print summary
@@ -176,21 +176,19 @@ def dry_run():
 def post():
     logger.info("post: Starting posting process")
     try:
-        # Load configuration
         config = load_config('config/config.json')
         credentials = load_credentials()
         
-        # Initialize database
         connection = connect_to_db('database/events.db')
         create_event_table(connection)
 
-        # Authenticate with Bluesky
+        # Authenticate accounts
         authenticated_accounts = {}
         for account in credentials['accounts']:
-            auth_token = authenticate(account['username'], account['password'])
+            token = authenticate(account['username'], account['password'])
             authenticated_accounts[account['username']] = {
                 'username': account['username'],
-                'auth_token': auth_token
+                'auth_token': token
             }
 
         # Dynamically identify and post events
@@ -203,8 +201,7 @@ def post():
                     continue
 
                 if os.getenv('PROD') == 'TRUE':
-                    post_event_to_bluesky(event, account)
-                    # Mark event as published if needed...
+                    post_event_to_bluesky(event, account, connection)
                 else:
                     logger.info(f"Dry run: Would post {event['title']} to {account['username']}")
 
