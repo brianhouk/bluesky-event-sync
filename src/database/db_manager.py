@@ -145,19 +145,6 @@ def mark_post_as_executed(connection, schedule_id):
     ''', (True, schedule_id))
     connection.commit()
 
-def dump_all_events(connection):
-    """Fetch and print all events from the database in a readable format."""
-    cursor = connection.cursor()
-    cursor.execute('SELECT * FROM events')
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-
-    print("\n=== ALL EVENTS IN DATABASE ===\n")
-    for row in rows:
-        row_dict = dict(zip(columns, row))
-        print(row_dict)
-    print("\n=== END OF EVENTS ===\n")
-
 def get_postable_events(connection, website_config):
     interval_map = {
         "30 days": timedelta(days=30),

@@ -30,8 +30,18 @@ def post_event_to_bluesky(event_data, account_info):
         logger.debug(f"Posting as account: {account_info['username']}")
 
         hashtags = event_data.get('hashtags', [])
-        post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
-        
+        post_content = f"{event_data['title']} - {event_data['description']} {' '.join(hashtags)} {event_data['url']}"
+
+        # Check if post_content exceeds 300 characters
+        if len(post_content) > 300:
+            logger.warning("Post content exceeds 300 characters, removing description")
+            post_content = f"{event_data['title']} {' '.join(hashtags)} {event_data['url']}"
+
+        # Ensure post_content is within the limit
+        if len(post_content) > 300:
+            logger.error("Post content still exceeds 300 characters after removing description")
+            raise ValueError("Post content exceeds 300 characters")
+
         logger.info(f"Posting content: {post_content}")
         # Use the Bluesky API to post the content
         # client.send_post(text=post_content)
@@ -70,6 +80,16 @@ def dry_run(event_data):
     logger.debug(f"Event data for dry run: {event_data}")
     
     hashtags = event_data.get('hashtags', [])
-    post_content = f"{event_data['title']} {event_data['url']} {' '.join(hashtags)}"
-    
+    post_content = f"{event_data['title']} - {event_data['description']} {' '.join(hashtags)} {event_data['url']}"
+
+    # Check if post_content exceeds 300 characters
+    if len(post_content) > 300:
+        logger.warning("Post content exceeds 300 characters, removing description")
+        post_content = f"{event_data['title']} {' '.join(hashtags)} {event_data['url']}"
+
+    # Ensure post_content is within the limit
+    if len(post_content) > 300:
+        logger.error("Post content still exceeds 300 characters after removing description")
+        raise ValueError("Post content exceeds 300 characters")
+
     logger.info(f"Dry run - Would post: {post_content}")

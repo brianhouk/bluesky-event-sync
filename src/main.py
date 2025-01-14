@@ -7,7 +7,7 @@ from src.config.config_loader import load_config, load_credentials
 from src.scrapers.oshkosh_scraper import OshkoshScraper
 from src.scrapers.winnebago_scraper import WinnebagoScraper
 from src.database.db_manager import (
-    connect_to_db, create_event_table, add_event, check_event_exists, get_postable_events, get_events, dump_all_events
+    connect_to_db, create_event_table, add_event, check_event_exists, get_postable_events, get_events
 )
 from src.bluesky.auth import authenticate
 from src.bluesky.poster import post_event_to_bluesky
@@ -124,7 +124,7 @@ def dry_run():
                     stats['accounts'][account_username]['total_posts'] += 1
                     stats['accounts'][account_username]['upcoming_posts'].append({
                         'event': event['title'],
-                        'post_times': [start_date.strftime('%Y-%m-%d %H:%M')]
+                        'post_time': start_date.strftime('%Y-%m-%d %H:%M')
                     })
             except ValueError as e:
                 logger.error(f"Date parsing error for event {event['title']}: {e}")
@@ -137,7 +137,9 @@ def dry_run():
 
     # Simulate posting all events in sorted order
     for event in all_events:
-        logger.info(f"Dry run: Would post event {event['title']} to account {event['account_username']}")
+        hashtags = event.get('hashtags', [])
+        post_content = f"{event['title']} - {event['description']} {' '.join(hashtags)} {event['url']}"
+        logger.info(f"Dry run: Would post: {post_content}")
 
     # Print summary
     print("\n=== DRY RUN SUMMARY ===\n")
@@ -164,11 +166,9 @@ def dry_run():
             print("\n  Upcoming posts:")
             for post in account_stats['upcoming_posts']:
                 print(f"    Event: {post['event']}")
-                print(f"    Post times: {', '.join(post['post_times'])}")
+                print(f"    Post time: {post['post_time']}")
                 print()
 
-    # Dump all events in the database
-    dump_all_events(connection)
 
     print("\nDry run complete!")
     return stats
