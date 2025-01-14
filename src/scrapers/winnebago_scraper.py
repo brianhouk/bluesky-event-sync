@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 import sys
 import os
+from urllib.parse import urljoin
 
 # Adjust imports based on how the script is run
 if __name__ == "__main__":
@@ -45,7 +46,7 @@ class WinnebagoScraper(BaseScraper):
                     if title_element and date_elements:
                         title = title_element.get_text(strip=True)
                         relative_url = title_element['href']
-                        full_url = self.base_url + relative_url
+                        full_url = urljoin(self.base_url, relative_url)
 
                         # Optional elements with defaults
                         desc_element = event_element.select_one('.views-field-field-description')
