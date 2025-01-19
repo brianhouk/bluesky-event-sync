@@ -44,7 +44,7 @@ def parse_date_string(date_str):
             logger.error(f"Failed to parse date string: {date_str}")
             raise
 
-def dry_run():
+def dry_run(skip_scraping):
     """Run in dry-run mode with detailed summary statistics"""
     logger.info("Starting dry-run mode")
     
@@ -60,77 +60,96 @@ def dry_run():
 
     all_events = []
 
-    # Initialize scraper and process each website
-    for website in config['websites']:
-        website_stats = {
-            'total_scraped': 0,
-            'new_events': 0,
-            'existing_events': 0,
-            'events': []
-        }
-        
-        if website['name'] == 'OshkoshEvents':
-            scraper = OshkoshScraper(website)
-        elif website['name'] == 'WinnebagoEvents':
-            scraper = WinnebagoScraper(website)
-        
-        # Scrape events
-        logger.info(f"Scraping {website['name']}")
-        events = scraper.scrape()
-        website_stats['total_scraped'] = len(events)
-        
-        # Process each event
-        for event in events:
-            logger.info(f"Processing event: {event}")
-            try:
-                start_date = parse_date_string(event['start_date'])
-                end_date = parse_date_string(event['end_date']) if event['end_date'] != 'N/A' else start_date
-                
-                # Check if event exists
-                existing_id = check_event_exists(connection, event['title'], start_date, event['url'])
-                
-                if existing_id:
-                    website_stats['existing_events'] += 1
-                else:
-                    website_stats['new_events'] += 1
-                    website_stats['events'].append({
-                        'title': event['title'],
-                        'date': start_date.strftime('%Y-%m-%d %H:%M'),
-                        'url': event['url']
-                    })
-                    all_events.append({
-                        'title': event['title'],
-                        'start_date': start_date,
-                        'end_date': end_date,
-                        'url': event['url'],
-                        'description': event['description'],
-                        'location': event['location'],
-                        'address': event['address'],
-                        'city': event['city'],
-                        'region': event['region'],
-                        'account_username': website['account_username'],
-                        'hashtags': website['hashtags']
-                    })
+    if not skip_scraping:
+        # Initialize scraper and process each website
+        for website in config['websites']:
+            website_stats = {
+                'total_scraped': 0,
+                'new_events': 0,
+                'existing_events': 0,
+                'events': []
+            }
+            
+            if website['name'] == 'OshkoshEvents':
+                scraper = OshkoshScraper(website)
+            elif website['name'] == 'WinnebagoEvents':
+                scraper = WinnebagoScraper(website)
+            
+            # Scrape events
+            logger.info(f"Scraping {website['name']}")
+            events = scraper.scrape()
+            website_stats['total_scraped'] = len(events)
+            
+            # Process each event
+            for event in events:
+                logger.info(f"Processing event: {event}")
+                try:
+                    start_date = parse_date_string(event['start_date'])
+                    end_date = parse_date_string(event['end_date']) if event['end_date'] != 'N/A' else start_date
+                    
+                    # Check if event exists
+                    existing_id = check_event_exists(connection, event['title'], start_date, event['url'])
+                    
+                    if existing_id:
+                        website_stats['existing_events'] += 1
+                    else:
+                        website_stats['new_events'] += 1
+                        website_stats['events'].append({
+                            'title': event['title'],
+                            'date': start_date.strftime('%Y-%m-%d %H:%M'),
+                            'url': event['url']
+                        })
+                        all_events.append({
+                            'title': event['title'],
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'url': event['url'],
+                            'description': event['description'],
+                            'location': event['location'],
+                            'address': event['address'],
+                            'city': event['city'],
+                            'region': event['region'],
+                            'account_username': website['account_username'],
+                            'hashtags': website['hashtags']
+                        })
 
-                # Track posts by account
-                account_username = website['account_username']
+                    # Track posts by account
+                    account_username = website['account_username']
+                    if account_username not in stats['accounts']:
+                        stats['accounts'][account_username] = {
+                            'total_posts': 0,
+                            'upcoming_posts': []
+                        }
+                    
+                    if not existing_id:
+                        stats['accounts'][account_username]['total_posts'] += 1
+                        stats['accounts'][account_username]['upcoming_posts'].append({
+                            'event': event['title'],
+                            'post_time': start_date.strftime('%Y-%m-%d %H:%M')
+                        })
+                except ValueError as e:
+                    logger.error(f"Date parsing error for event {event['title']}: {e}")
+                    continue
+
+            stats['websites'][website['name']] = website_stats
+
+    else:
+        # If skipping scraping, load events from the database
+        for website in config['websites']:
+            postable_events = get_postable_events(connection, website)
+            for event in postable_events:
+                all_events.append(event)
+                account_username = event['account_username']
                 if account_username not in stats['accounts']:
                     stats['accounts'][account_username] = {
                         'total_posts': 0,
                         'upcoming_posts': []
                     }
-                
-                if not existing_id:
-                    stats['accounts'][account_username]['total_posts'] += 1
-                    stats['accounts'][account_username]['upcoming_posts'].append({
-                        'event': event['title'],
-                        'post_time': start_date.strftime('%Y-%m-%d %H:%M')
-                    })
-            except ValueError as e:
-                logger.error(f"Date parsing error for event {event['title']}: {e}")
-                continue
-
-        stats['websites'][website['name']] = website_stats
+                stats['accounts'][account_username]['total_posts'] += 1
+                stats['accounts'][account_username]['upcoming_posts'].append({
+                    'event': event['title'],
+                    'post_time': event['start_date']
+                })
 
     # Sort all events by start date
     all_events.sort(key=lambda x: x['start_date'])
@@ -169,11 +188,10 @@ def dry_run():
                 print(f"    Post time: {post['post_time']}")
                 print()
 
-
     print("\nDry run complete!")
     return stats
 
-def post():
+def post(skip_scraping):
     logger.info("post: Starting posting process")
     try:
         config = load_config('config/config.json')
@@ -191,26 +209,29 @@ def post():
                 'auth_token': token
             }
 
-        # Dynamically identify and post events
-        for website in config['websites']:
-            postable = get_postable_events(connection, website)
-            for event in postable:
-                account = authenticated_accounts.get(event['account_username'])
-                if not account:
-                    logger.warning(f"No credentials found for account {event['account_username']}")
-                    continue
+        if not skip_scraping:
+            # Dynamically identify and post events
+            for website in config['websites']:
+                postable = get_postable_events(connection, website)
+                for event in postable:
+                    account = authenticated_accounts.get(event['account_username'])
+                    if not account:
+                        logger.warning(f"No credentials found for account {event['account_username']}")
+                        continue
 
-                if os.getenv('PROD') == 'TRUE':
-                    post_event_to_bluesky(event, account, connection)
-                else:
-                    logger.info(f"Dry run: Would post {event['title']} to {account['username']}")
+                    if os.getenv('PROD') == 'TRUE':
+                        post_event_to_bluesky(event, account, connection)
+                    else:
+                        logger.info(f"Dry run: Would post {event['title']} to {account['username']}")
 
     except Exception as e:
         logger.error(f"post: Failed: {e}")
         raise
 
 if __name__ == "__main__":
+    skip_scraping = os.getenv('SKIP_SCRAPING', 'FALSE').upper() == 'TRUE'
+
     if os.getenv('PROD') == 'TRUE':
-        post()
+        post(skip_scraping)
     else:
-        dry_run()
+        dry_run(skip_scraping)
