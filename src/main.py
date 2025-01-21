@@ -2,12 +2,12 @@ import os
 import logging
 import json
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.config.config_loader import load_config, load_credentials
 from src.scrapers.oshkosh_scraper import OshkoshScraper
 from src.scrapers.winnebago_scraper import WinnebagoScraper
 from src.database.db_manager import (
-    connect_to_db, create_event_table, add_event, check_event_exists, get_postable_events, get_events
+    connect_to_db, create_event_table, create_publication_schedule_table, add_event, check_event_exists, get_postable_events, get_events, schedule_event_posts
 )
 from src.bluesky.auth import authenticate
 from src.bluesky.poster import post_event_to_bluesky
@@ -56,6 +56,7 @@ def dry_run(skip_scraping):
     config = load_config('config/config.json')
     connection = connect_to_db('database/events.db')
     create_event_table(connection)
+    create_publication_schedule_table(connection)
 
     if not skip_scraping:
         for website in config['websites']:
@@ -69,7 +70,7 @@ def dry_run(skip_scraping):
                     start_date = parse_date_string(ev['start_date'])
                     end_date = parse_date_string(ev['end_date']) if ev['end_date'] != 'N/A' else start_date
                     if not check_event_exists(connection, ev['title'], start_date, ev['url']):
-                        add_event(
+                        event_id = add_event(
                             connection,
                             ev['title'],
                             start_date,
@@ -83,6 +84,9 @@ def dry_run(skip_scraping):
                             website['account_username'],
                             website['name']
                         )
+                        if event_id:
+                            intervals = [timedelta(days=30), timedelta(days=14), timedelta(days=5), timedelta(days=1)]
+                            schedule_event_posts(connection, event_id, start_date, intervals)
                 except ValueError as e:
                     logger.error(f"Date parsing error: {e}")
                     continue
@@ -95,7 +99,25 @@ def dry_run(skip_scraping):
     all_events.sort(key=lambda x: parse_date_string(x['start_date']))
     for event in all_events:
         start_date = parse_date_string(event['start_date'])
-        post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {event['url']}"
+        hashtags = ' '.join(website.get('hashtags', []))  # Retrieve hashtags from the website config
+        post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {hashtags} {event['url']}"
+
+        # Check if post_content exceeds 300 characters
+        if len(post_content) > 300:
+            logger.warning("Post content exceeds 300 characters, removing description")
+            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags} {event['url']}"
+
+        # Ensure post_content is within the limit
+        if len(post_content) > 300:
+            logger.warning("Post content still exceeds 300 characters, removing URL")
+            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags}"
+
+        # Ensure post_content is within the limit
+        if len(post_content) > 300:
+            logger.error("Post content still exceeds 300 characters after removing URL")
+            logger.error(f"Failed to post event: {event['title']}")
+            continue
+
         logger.info(f"Dry run: Would post: {post_content}")
     return True
 
@@ -106,6 +128,7 @@ def post(skip_scraping):
         credentials = load_credentials()
         connection = connect_to_db('database/events.db')
         create_event_table(connection)
+        create_publication_schedule_table(connection)
 
         if not skip_scraping:
             for website in config['websites']:
@@ -119,7 +142,7 @@ def post(skip_scraping):
                         start_date = parse_date_string(ev['start_date'])
                         end_date = parse_date_string(ev['end_date']) if ev['end_date'] != 'N/A' else start_date
                         if not check_event_exists(connection, ev['title'], start_date, ev['url']):
-                            add_event(
+                            event_id = add_event(
                                 connection,
                                 ev['title'],
                                 start_date,
@@ -133,6 +156,9 @@ def post(skip_scraping):
                                 website['account_username'],
                                 website['name']
                             )
+                            if event_id:
+                                intervals = [timedelta(days=30), timedelta(days=14), timedelta(days=5), timedelta(days=1)]
+                                schedule_event_posts(connection, event_id, start_date, intervals)
                     except ValueError as e:
                         logger.error(f"Date parsing error: {e}")
                         continue
@@ -157,12 +183,33 @@ def post(skip_scraping):
                 logger.warning(f"No credentials for account {event['account_username']}")
                 continue
             start_date = parse_date_string(event['start_date'])
-            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {event['url']}"
+            hashtags = ' '.join(website.get('hashtags', []))  # Retrieve hashtags from the website config
+            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {hashtags} {event['url']}"
 
-            if os.getenv('PROD') == 'TRUE':
-                post_event_to_bluesky(event, account, connection)
-            else:
-                logger.info(f"Dry run: Would post {post_content} to {account['username']}")
+            # Check if post_content exceeds 300 characters
+            if len(post_content) > 300:
+                logger.warning("Post content exceeds 300 characters, removing description")
+                post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags} {event['url']}"
+
+            # Ensure post_content is within the limit
+            if len(post_content) > 300:
+                logger.warning("Post content still exceeds 300 characters, removing URL")
+                post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags}"
+
+            # Ensure post_content is within the limit
+            if len(post_content) > 300:
+                logger.error("Post content still exceeds 300 characters after removing URL")
+                logger.error(f"Failed to post event: {event['title']}")
+                continue
+
+            try:
+                if os.getenv('PROD') == 'TRUE':
+                    post_event_to_bluesky(event, account, connection)
+                else:
+                    logger.info(f"Dry run: Would post {post_content} to {account['username']}")
+            except ValueError as e:
+                logger.error(f"Failed to post event: {event['title']} due to: {e}")
+                continue
 
     except Exception as e:
         logger.error(f"post: Failed: {e}")

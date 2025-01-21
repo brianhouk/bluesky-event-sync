@@ -52,6 +52,21 @@ def create_event_table(connection):
     ''')
     connection.commit()
 
+def create_publication_schedule_table(connection):
+    cursor = connection.cursor()
+    logger.info("Creating publication_schedule table if not exists")
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS publication_schedule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            scheduled_time TEXT NOT NULL,
+            interval TEXT NOT NULL,
+            is_posted BOOLEAN NOT NULL DEFAULT 0,
+            FOREIGN KEY(event_id) REFERENCES events(id)
+        )
+    ''')
+    connection.commit()
+
 def check_event_exists(connection, title, start_date, url):
     """Check if an event already exists in the database"""
     cursor = connection.cursor()
@@ -139,7 +154,7 @@ def mark_post_as_executed(connection, schedule_id):
     logger.info(f"Marking post as executed for schedule_id: {schedule_id}")
     cursor.execute('''
         UPDATE publication_schedule
-        SET is_executed = ?
+        SET is_posted = ?
         WHERE id = ?
     ''', (True, schedule_id))
     connection.commit()
@@ -201,3 +216,13 @@ def get_postable_events(connection, website_config):
 
     logger.info(f"Found {len(events_to_post)} events to post for {website_config['name']}")
     return events_to_post
+
+def schedule_event_posts(connection, event_id, event_start_date, intervals):
+    cursor = connection.cursor()
+    for interval in intervals:
+        scheduled_time = event_start_date - interval
+        cursor.execute('''
+            INSERT INTO publication_schedule (event_id, scheduled_time, interval, is_posted)
+            VALUES (?, ?, ?, ?)
+        ''', (event_id, scheduled_time.isoformat(), str(interval), False))
+    connection.commit()

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from atproto_client import models
+from src.database.db_manager import mark_post_as_executed  # Correct import
 
 # Configure logging
 logging.basicConfig(
@@ -50,8 +50,14 @@ def post_event_to_bluesky(event_data, account_info, connection):
 
         # Ensure post_content is within the limit
         if len(post_content) > 300:
-            logger.error("Post content still exceeds 300 characters after removing description")
-            raise ValueError("Post content exceeds 300 characters")
+            logger.warning("Post content still exceeds 300 characters, removing URL")
+            post_content = f"{event_data['title']} ({start_date_str}) {' '.join(hashtags)}"
+
+        # Ensure post_content is within the limit
+        if len(post_content) > 300:
+            logger.error("Post content still exceeds 300 characters after removing URL")
+            logger.error(f"Failed to post event: {event_data['title']}")
+            return
 
         logger.info(f"Posting content: {post_content}")
         # Use the Bluesky API to post the content
@@ -66,6 +72,10 @@ def post_event_to_bluesky(event_data, account_info, connection):
             WHERE id = ?
         ''', (datetime.now().isoformat(), event_data['id']))
         connection.commit()
+
+        # Mark the post as executed in the publication schedule
+        if 'schedule_id' in event_data:
+            mark_post_as_executed(connection, event_data['schedule_id'])
         
     except Exception as e:
         logger.error(f"post_event_to_bluesky: Failed: {e}")

@@ -10,7 +10,7 @@
         "1 day"
       ],
       "account_username": "discoveroshkosh.bsky.social",
-      "hashtags": ["#oshkosh", "#oshkoshevents", "#wisconsin"]
+      "hashtags": ["#oshkosh", "#oshkoshevents", "#wisconsin", "#discoveroshkosh", "#wisconsinevents"]
     },
     {
       "name": "WinnebagoEvents",
@@ -22,7 +22,7 @@
         "1 day"
       ],
       "account_username": "wisconsinevents.bsky.social",
-      "hashtags": ["#winnebago", "#winnebagoevents", "#wisconsin"]
+      "hashtags": ["#winnebago", "#winnebagoevents", "#wisconsin", "#wisconsinevents"]
     }
   ],
   "dry_run": true,
