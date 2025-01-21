@@ -130,6 +130,9 @@ def post(skip_scraping):
         create_event_table(connection)
         create_publication_schedule_table(connection)
 
+        max_posts = int(os.getenv('MAX_POSTS', '0'))
+        post_count = 0
+
         if not skip_scraping:
             for website in config['websites']:
                 if website['name'] == 'OshkoshEvents':
@@ -179,6 +182,10 @@ def post(skip_scraping):
 
         all_events.sort(key=lambda x: parse_date_string(x['start_date']))
         for event in all_events:
+            if max_posts > 0 and post_count >= max_posts:
+                logger.info(f"Reached the maximum number of posts: {max_posts}")
+                break
+
             account = authenticated_accounts.get(event['account_username'])
             if not account:
                 logger.warning(f"No credentials for account {event['account_username']}")
@@ -206,6 +213,7 @@ def post(skip_scraping):
             try:
                 if os.getenv('PROD') == 'TRUE':
                     post_event_to_bluesky(event, account, connection)
+                    post_count += 1
                 else:
                     logger.info(f"Dry run: Would post {post_content} to {account['username']}")
             except ValueError as e:

@@ -43,14 +43,16 @@ bluesky-event-publisher
 
 3. Configure the application by editing the `config/config.json` file.
 
-4. Set up environment variables for your Bluesky credentials:
+4. Set up environment variables for your Bluesky credentials and other configurations:
 
 ## Environment Variables
 To avoid storing sensitive credentials in the configuration files, use environment variables. Set the following environment variables before running the application:
 
 - `BLUESKY_DISCOVEROSHKOSH_PASSWORD`: The password for the `discoveroshkosh` Bluesky account.
 - `BLUESKY_WISCONSINEVENTS_PASSWORD`: The password for the `wisconsinevents` Bluesky account.
-- `PROD`: Set this variable to `true` to enable posting to Bluesky. If not set, the application will run in dry-run mode and only log the event data.
+- `PROD`: Set this variable to `TRUE` to enable posting to Bluesky. If not set, the application will run in dry-run mode and only log the event data.
+- `SKIP_SCRAPING`: Set this variable to `TRUE` to skip the scraping process and only post events from the database.
+- `MAX_POSTS`: Set this variable to limit the number of posts to Bluesky. If not set, there is no limit on the number of posts.
 
 You can set these environment variables in your shell or in a `.env` file if you are using Docker Compose.
 
@@ -58,7 +60,9 @@ Example:
 ```sh
 export BLUESKY_DISCOVEROSHKOSH_PASSWORD=your_password_for_discoveroshkosh
 export BLUESKY_WISCONSINEVENTS_PASSWORD=your_password_for_wisconsinevents
-export PROD=true
+export PROD=TRUE
+export SKIP_SCRAPING=TRUE
+export MAX_POSTS=2
 ```
 
 ## Running the Application
