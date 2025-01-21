@@ -81,6 +81,7 @@ def dry_run(skip_scraping):
                             ev.get('address', ''),
                             ev.get('city', ''),
                             ev.get('region', ''),
+                            ' '.join(website.get('hashtags', [])),  # Add hashtags from config
                             website['account_username'],
                             website['name']
                         )
@@ -99,24 +100,9 @@ def dry_run(skip_scraping):
     all_events.sort(key=lambda x: parse_date_string(x['start_date']))
     for event in all_events:
         start_date = parse_date_string(event['start_date'])
-        hashtags = ' '.join(website.get('hashtags', []))  # Retrieve hashtags from the website config
-        post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {hashtags} {event['url']}"
+        hashtags = event.get('hashtags', '').split()  # Retrieve hashtags from the database
+        post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
 
-        # Check if post_content exceeds 300 characters
-        if len(post_content) > 300:
-            logger.warning("Post content exceeds 300 characters, removing description")
-            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags} {event['url']}"
-
-        # Ensure post_content is within the limit
-        if len(post_content) > 300:
-            logger.warning("Post content still exceeds 300 characters, removing URL")
-            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags}"
-
-        # Ensure post_content is within the limit
-        if len(post_content) > 300:
-            logger.error("Post content still exceeds 300 characters after removing URL")
-            logger.error(f"Failed to post event: {event['title']}")
-            continue
 
         logger.info(f"Dry run: Would post: {post_content}")
     return True
@@ -156,6 +142,7 @@ def post(skip_scraping):
                                 ev.get('address', ''),
                                 ev.get('city', ''),
                                 ev.get('region', ''),
+                                ev.get('hashtags', ''),  # Add hashtags from event data
                                 website['account_username'],
                                 website['name']
                             )
@@ -191,25 +178,10 @@ def post(skip_scraping):
                 logger.warning(f"No credentials for account {event['account_username']}")
                 continue
             start_date = parse_date_string(event['start_date'])
-            hashtags = ' '.join(website.get('hashtags', []))  # Retrieve hashtags from the website config
-            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {hashtags} {event['url']}"
+            hashtags = event.get('hashtags', '').split()  # Retrieve hashtags from the database
+            post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
 
-            # Check if post_content exceeds 300 characters
-            if len(post_content) > 300:
-                logger.warning("Post content exceeds 300 characters, removing description")
-                post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags} {event['url']}"
-
-            # Ensure post_content is within the limit
-            if len(post_content) > 300:
-                logger.warning("Post content still exceeds 300 characters, removing URL")
-                post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) {hashtags}"
-
-            # Ensure post_content is within the limit
-            if len(post_content) > 300:
-                logger.error("Post content still exceeds 300 characters after removing URL")
-                logger.error(f"Failed to post event: {event['title']}")
-                continue
-
+         
             try:
                 if os.getenv('PROD') == 'TRUE':
                     post_event_to_bluesky(event, account, connection)

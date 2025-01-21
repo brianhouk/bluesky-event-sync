@@ -44,7 +44,8 @@ def post_event_to_bluesky(event_data, account_info, connection):
         logger.debug(f"Full event data: {event_data}")
         logger.debug(f"Posting as account: {username}")
 
-        hashtags = event_data.get('hashtags', [])
+        hashtags = event_data.get('hashtags', '').split()
+        logger.debug(f"Event hashtags: {hashtags}")
         
         # Ensure start_date is a datetime object
         if isinstance(event_data['start_date'], str):

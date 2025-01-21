@@ -221,6 +221,8 @@ class OshkoshScraper(BaseScraper):
                     event_data = json.loads(json_ld.string)
                     if event_data.get('@type') == 'Event':
                         logger.debug(f"Extracted JSON-LD: {event_data}")
+                        hashtags = ' '.join(self.config.get('hashtags', []))
+                        logger.debug(f"Event hashtags: {hashtags}")
                         event = {
                             'title': event_data.get('name', 'N/A'),
                             'start_date': start_date or event_data.get('startDate', 'N/A'),
@@ -230,7 +232,8 @@ class OshkoshScraper(BaseScraper):
                             'location': event_data.get('location', {}).get('name', 'N/A'),
                             'address': event_data.get('location', {}).get('address', {}).get('streetAddress', 'N/A'),
                             'city': event_data.get('location', {}).get('address', {}).get('addressLocality', 'N/A'),
-                            'region': event_data.get('location', {}).get('address', {}).get('addressRegion', 'N/A')
+                            'region': event_data.get('location', {}).get('address', {}).get('addressRegion', 'N/A'),
+                            'hashtags': hashtags  # Add hashtags from config
                         }
                         logger.info(f"Scraped event: {event}")
                         events.append(event)

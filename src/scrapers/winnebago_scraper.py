@@ -71,6 +71,8 @@ class WinnebagoScraper(BaseScraper):
                                         existing_event['end_date'] = date
                                         logger.debug(f"Updated end date for {title}")
                                 else:
+                                    hashtags = ' '.join(self.config.get('hashtags', []))
+                                    logger.debug(f"Event hashtags: {hashtags}")
                                     event = {
                                         'title': title,
                                         'start_date': date,
@@ -80,7 +82,8 @@ class WinnebagoScraper(BaseScraper):
                                         'location': location,
                                         'address': address,
                                         'city': 'Oshkosh',
-                                        'region': 'WI'
+                                        'region': 'WI',
+                                        'hashtags': hashtags  # Add hashtags from config
                                     }
                                     logger.info(f"Added event: {title}")
                                     events.append(event)

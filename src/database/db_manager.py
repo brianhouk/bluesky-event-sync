@@ -43,6 +43,7 @@ def create_event_table(connection):
             address TEXT,
             city TEXT,
             region TEXT,
+            hashtags TEXT,  -- New column for hashtags
             published BOOLEAN NOT NULL,
             account_username TEXT NOT NULL,
             config_name TEXT NOT NULL,
@@ -77,8 +78,7 @@ def check_event_exists(connection, title, start_date, url):
     ''', (title, start_date.isoformat(), url))
     result = cursor.fetchone()
     return result[0] if result else None
-
-def add_event(connection, title, start_date, end_date, url, description, location, address, city, region, account_username, config_name):
+def add_event(connection, title, start_date, end_date, url, description, location, address, city, region, hashtags, account_username, config_name):
     cursor = connection.cursor()
     try:
         # First check if event already exists
@@ -88,16 +88,17 @@ def add_event(connection, title, start_date, end_date, url, description, locatio
             return existing_event_id
 
         logger.info(f"Adding new event: {title}")
+        logger.debug(f"Event hashtags: {hashtags}")
         cursor.execute('''
             INSERT INTO events (
                 title, start_date, end_date, url, description, 
-                location, address, city, region, published, 
+                location, address, city, region, hashtags, published, 
                 account_username, config_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             title, start_date.isoformat(), end_date.isoformat(), 
-            url, description, location, address, city, region, 
+            url, description, location, address, city, region, hashtags,
             False, account_username, config_name
         ))
         connection.commit()
@@ -110,7 +111,7 @@ def add_event(connection, title, start_date, end_date, url, description, locatio
     except Exception as e:
         logger.error(f"Failed to add event '{title}': {e}")
         return None
-
+    
 def get_events(connection):
     cursor = connection.cursor()
     logger.info("Fetching all events")
@@ -187,7 +188,7 @@ def get_postable_events(connection, website_config):
 
     cursor.execute('''
         SELECT id, title, start_date, end_date, url, description, location, 
-               address, city, region, published, account_username, config_name, last_posted
+               address, city, region, hashtags, published, account_username, config_name, last_posted
         FROM events
         WHERE account_username = ?
     ''', (website_config['account_username'],))
@@ -211,6 +212,7 @@ def get_postable_events(connection, website_config):
         for interval_str in website_config['update_intervals']:
             interval = interval_map.get(interval_str)
             if interval and time_until_event <= interval:
+                logger.debug(f"Event hashtags: {event['hashtags']}")
                 events_to_post.append(event)
                 break
 
