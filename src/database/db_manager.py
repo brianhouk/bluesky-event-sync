@@ -63,7 +63,7 @@ def check_event_exists(connection, title, start_date, url):
     result = cursor.fetchone()
     return result[0] if result else None
 
-def add_event(connection, title, start_date, end_date, url, description, location, address, city, region, account_username, config_name, hashtags):
+def add_event(connection, title, start_date, end_date, url, description, location, address, city, region, account_username, config_name):
     cursor = connection.cursor()
     try:
         # First check if event already exists
@@ -77,13 +77,13 @@ def add_event(connection, title, start_date, end_date, url, description, locatio
             INSERT INTO events (
                 title, start_date, end_date, url, description, 
                 location, address, city, region, published, 
-                account_username, config_name, hashtags
+                account_username, config_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             title, start_date.isoformat(), end_date.isoformat(), 
             url, description, location, address, city, region, 
-            False, account_username, config_name, ','.join(hashtags)
+            False, account_username, config_name
         ))
         connection.commit()
         event_id = cursor.lastrowid
