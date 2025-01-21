@@ -1,6 +1,8 @@
+import os
 import logging
 from datetime import datetime
-from src.database.db_manager import mark_post_as_executed  # Correct import
+from atproto import Client, models
+from src.database.db_manager import mark_post_as_executed
 
 # Configure logging
 logging.basicConfig(
@@ -27,9 +29,20 @@ def post_event_to_bluesky(event_data, account_info, connection):
     """
     logger.info(f"post_event_to_bluesky: Starting for {account_info['username']}")
     try:
+        logger.debug("Creating Client instance")
+        client = Client()
+        logger.debug(f"Client instance created: {client}")
+
+        username = account_info['username']
+        password = account_info['password']
+        logger.info(f"Attempting to authenticate user {username}")
+
+        client.login(username, password)
+        logger.info(f"Successfully authenticated user {username}")
+
         logger.info(f"Preparing to post event: {event_data['title']}")
         logger.debug(f"Full event data: {event_data}")
-        logger.debug(f"Posting as account: {account_info['username']}")
+        logger.debug(f"Posting as account: {username}")
 
         hashtags = event_data.get('hashtags', [])
         
@@ -60,15 +73,15 @@ def post_event_to_bluesky(event_data, account_info, connection):
             return
 
         logger.info(f"Posting content: {post_content}")
-        # Use the Bluesky API to post the content
-        # client.send_post(text=post_content)
-        logger.info("Post successful")
+        post = client.send_post(text=post_content)
+        logger.info(f"Post sent successfully: {post}")
+        logger.debug(f"Post URI: {post.uri}, Post CID: {post.cid}")
 
         # Update the last_posted timestamp
         cursor = connection.cursor()
         cursor.execute('''
-            UPDATE events
-            SET last_posted = ?
+            UPDATE events 
+            SET last_posted = ? 
             WHERE id = ?
         ''', (datetime.now().isoformat(), event_data['id']))
         connection.commit()

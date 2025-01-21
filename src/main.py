@@ -168,6 +168,7 @@ def post(skip_scraping):
             token = authenticate(account['username'], account['password'])
             authenticated_accounts[account['username']] = {
                 'username': account['username'],
+                'password': account['password'],  # Ensure password is included
                 'auth_token': token
             }
 
