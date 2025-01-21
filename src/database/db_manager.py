@@ -46,7 +46,6 @@ def create_event_table(connection):
             published BOOLEAN NOT NULL,
             account_username TEXT NOT NULL,
             config_name TEXT NOT NULL,
-            hashtags TEXT NOT NULL,
             last_posted TEXT,  -- New column to track last posted timestamp
             UNIQUE(title, start_date, url)
         )
@@ -102,7 +101,6 @@ def get_events(connection):
     logger.info("Fetching all events")
     cursor.execute('SELECT * FROM events')
     return cursor.fetchall()
-
 
 def get_event_by_id(connection, event_id):
     """Get event by ID and return as dictionary"""
@@ -174,7 +172,7 @@ def get_postable_events(connection, website_config):
 
     cursor.execute('''
         SELECT id, title, start_date, end_date, url, description, location, 
-               address, city, region, published, account_username, hashtags, last_posted
+               address, city, region, published, account_username, config_name, last_posted
         FROM events
         WHERE account_username = ?
     ''', (website_config['account_username'],))
