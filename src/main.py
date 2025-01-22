@@ -103,6 +103,7 @@ def dry_run(skip_scraping):
         hashtags = event.get('hashtags', '').split()  # Retrieve hashtags from the database
         post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
 
+
         logger.info(f"Dry run: Would post: {post_content}")
     return True
 
@@ -180,20 +181,16 @@ def post(skip_scraping):
             hashtags = event.get('hashtags', '').split()  # Retrieve hashtags from the database
             post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
 
+         
             try:
                 if os.getenv('PROD') == 'TRUE':
                     post_event_to_bluesky(event, account, connection)
                     post_count += 1
                 else:
                     logger.info(f"Dry run: Would post {post_content} to {account['username']}")
-            except Exception as e:
-                if hasattr(e, 'status_code') and e.status_code == 429:
-                    retry_time = datetime.fromtimestamp(int(e.headers.get('ratelimit-reset', 0)))
-                    logger.error(f"Rate limit exceeded. Retry after: {retry_time}")
-                    break
-                else:
-                    logger.error(f"Failed to post event: {event['title']} due to: {e}")
-                    continue
+            except ValueError as e:
+                logger.error(f"Failed to post event: {event['title']} due to: {e}")
+                continue
 
     except Exception as e:
         logger.error(f"post: Failed: {e}")

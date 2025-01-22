@@ -80,11 +80,7 @@ def post_event_to_bluesky(event_data, account_info, connection):
             mark_post_as_executed(connection, event_data['schedule_id'])
         
     except Exception as e:
-        if hasattr(e, 'status_code') and e.status_code == 429:
-            retry_time = datetime.fromtimestamp(int(e.headers.get('ratelimit-reset', 0)))
-            logger.error(f"Rate limit exceeded. Retry after: {retry_time}")
-        else:
-            logger.error(f"post_event_to_bluesky: Failed: {e}")
+        logger.error(f"post_event_to_bluesky: Failed: {e}")
         raise
 
 def dry_run(event_data):
