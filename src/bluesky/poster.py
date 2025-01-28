@@ -145,18 +145,26 @@ def post_event_to_bluesky(event_data, account_info, connection):
         logger.info(f"Post sent successfully: {post}")
         logger.debug(f"Post URI: {post.uri}, Post CID: {post.cid}")
 
-        # Update the last_posted timestamp
+        # Update both tables in single transaction
         cursor = connection.cursor()
-        cursor.execute('''
-            UPDATE events 
-            SET last_posted = ? 
-            WHERE id = ?
-        ''', (datetime.now().isoformat(), event_data['id']))
-        connection.commit()
-
-        # Mark the post as executed in the publication schedule
-        if 'schedule_id' in event_data:
-            mark_post_as_executed(connection, event_data['schedule_id'])
+        cursor.execute('BEGIN TRANSACTION')
+        try:
+            cursor.execute('''
+                UPDATE events 
+                SET last_posted = ? 
+                WHERE id = ?
+            ''', (datetime.now().isoformat(), event_data['id']))
+            
+            cursor.execute('''
+                UPDATE publication_schedule
+                SET is_posted = 1
+                WHERE id = ?
+            ''', (event_data['schedule_id'],))
+            
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise e
 
     except Exception as e:
         logger.error(f"post_event_to_bluesky: Failed: {e}")
