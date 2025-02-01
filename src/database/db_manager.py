@@ -43,10 +43,11 @@ def create_event_table(connection):
             address TEXT,
             city TEXT,
             region TEXT,
-            hashtags TEXT,
+            hashtags TEXT,  -- New column for hashtags
+            published BOOLEAN NOT NULL,
             account_username TEXT NOT NULL,
             config_name TEXT NOT NULL,
-            last_posted TEXT,
+            last_posted TEXT,  -- New column to track last posted timestamp
             UNIQUE(title, start_date, url)
         )
     ''')
@@ -152,23 +153,18 @@ def calculate_post_timings(event_date):
 def mark_post_as_executed(connection, schedule_id):
     cursor = connection.cursor()
     logger.info(f"Marking post as executed for schedule_id: {schedule_id}")
-    try:
-        cursor.execute('''
-            UPDATE publication_schedule
-            SET is_posted = 1
-            WHERE id = ?
-        ''', (schedule_id,))
-        connection.commit()
-        rows_affected = cursor.rowcount
-        logger.info(f"Updated {rows_affected} rows in publication_schedule")
-    except Exception as e:
-        logger.error(f"Error marking post as executed: {e}")
-        raise
+    cursor.execute('''
+        UPDATE publication_schedule
+        SET is_posted = ?
+        WHERE id = ?
+    ''', (True, schedule_id))
+    connection.commit()
 
 def get_postable_events(connection, website_config):
-    """Get events that should be posted based on configured intervals."""
-    # TODO: Add database pruning functionality to remove expired events older than X days
-    
+    """
+    Dynamically identify events that should be posted based on their start date
+    and configured intervals.
+    """
     logger.info(f"Checking for events to post for {website_config['name']}")
     cursor = connection.cursor()
     
@@ -182,12 +178,19 @@ def get_postable_events(connection, website_config):
     now = datetime.now()
     events_to_post = []
 
+    # Determine the maximum interval for this website
+    intervals = [interval_map[i] for i in website_config["update_intervals"] if i in interval_map]
+    if not intervals:
+        logger.warning(f"No valid intervals found for {website_config['name']}")
+        return []
+
+    max_interval = max(intervals)
+
     cursor.execute('''
-        SELECT e.*, ps.id as schedule_id, ps.scheduled_time, ps.is_posted
-        FROM events e
-        LEFT JOIN publication_schedule ps ON e.id = ps.event_id
-        WHERE e.account_username = ?
-        AND (ps.is_posted = 0 OR ps.is_posted IS NULL)
+        SELECT id, title, start_date, end_date, url, description, location, 
+               address, city, region, hashtags, published, account_username, config_name, last_posted
+        FROM events
+        WHERE account_username = ?
     ''', (website_config['account_username'],))
 
     for row in cursor.fetchall():
@@ -195,40 +198,25 @@ def get_postable_events(connection, website_config):
         event_start = datetime.fromisoformat(event['start_date'])
         time_until_event = event_start - now
 
-        logger.info(f"\nEvaluating event: {event['title']}")
-        
-        # Check if event is in the past
-        if time_until_event <= timedelta(0):
-            logger.info(f"Event expired: {event['title']}")
+        # Skip if outside the max interval or event is already past
+        if time_until_event <= timedelta(0) or time_until_event > max_interval:
             continue
 
-        # Log last posting information
-        last_posted = event.get('last_posted')
+        # Check if the event has been posted within the interval
+        last_posted = event['last_posted']
         if last_posted:
-            last_posted_date = datetime.fromisoformat(last_posted)
-            time_since_last_post = now - last_posted_date
-            next_post_due = last_posted_date + max(interval_map.values())
-            time_until_next_post = next_post_due - now
-            
-            logger.info(f"Last posted on: {last_posted_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            logger.info(f"Time since last post: {time_since_last_post}")
-            logger.info(f"Time until next eligible post: {time_until_next_post}")
-        else:
-            logger.info("Never posted")
-            logger.info("Eligible for immediate posting")
+            last_posted = datetime.fromisoformat(last_posted)
+            if now - last_posted <= max_interval:
+                continue
 
-        logger.info(f"Time until event: {time_until_event}")
-
-        # Check posting eligibility
         for interval_str in website_config['update_intervals']:
             interval = interval_map.get(interval_str)
             if interval and time_until_event <= interval:
-                if not last_posted or time_since_last_post > min(interval_map.values()):
-                    logger.info(f"Event qualifies for posting at {interval_str} interval")
-                    events_to_post.append(event)
-                    break
+                logger.debug(f"Event hashtags: {event['hashtags']}")
+                events_to_post.append(event)
+                break
 
-    logger.info(f"\nFound {len(events_to_post)} events to post for {website_config['name']}")
+    logger.info(f"Found {len(events_to_post)} events to post for {website_config['name']}")
     return events_to_post
 
 def schedule_event_posts(connection, event_id, event_start_date, intervals):
