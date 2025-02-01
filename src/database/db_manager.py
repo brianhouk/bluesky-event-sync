@@ -163,18 +163,18 @@ def mark_post_as_executed(connection, schedule_id):
 def get_postable_events(connection, website_config):
     """
     Dynamically identify events that should be posted based on their start date
-    and configured intervals.
+    and configured intervals. Past events are removed from the database.
     """
     logger.info(f"Checking for events to post for {website_config['name']}")
     cursor = connection.cursor()
-    
+
     interval_map = {
         "30 days": timedelta(days=30),
         "2 weeks": timedelta(days=14),
         "5 days": timedelta(days=5),
         "1 day": timedelta(days=1)
     }
-    
+
     now = datetime.now()
     events_to_post = []
 
@@ -198,23 +198,77 @@ def get_postable_events(connection, website_config):
         event_start = datetime.fromisoformat(event['start_date'])
         time_until_event = event_start - now
 
-        # Skip if outside the max interval or event is already past
-        if time_until_event <= timedelta(0) or time_until_event > max_interval:
+        # Remove events in the past
+        if time_until_event <= timedelta(0):
+            logger.info(
+                f"Event evaluated: '{event['title']}' is in the past (start: {event_start}). "
+                "Removing event from the database."
+            )
+            cursor.execute("DELETE FROM events WHERE id = ?", (event['id'],))
+            connection.commit()
             continue
 
-        # Check if the event has been posted within the interval
+        # Compute thresholds status for each configured update interval
         last_posted = event['last_posted']
+        last_posted_dt = datetime.fromisoformat(last_posted) if last_posted else None
+        thresholds_status = {}
+        next_post_time = None
+        min_delta = None
+        for interval_str in website_config['update_intervals']:
+            delta = interval_map.get(interval_str)
+            scheduled_time = event_start - delta
+            status = "Posted" if last_posted_dt and (last_posted_dt >= scheduled_time) else "Pending"
+            thresholds_status[interval_str] = status
+
+            if scheduled_time > now and status == "Pending":
+                diff = scheduled_time - now
+                if min_delta is None or diff < min_delta:
+                    min_delta = diff
+                    next_post_time = scheduled_time
+
+        # Log evaluation details for every event
+        logger.info(
+            f"Event: '{event['title']}', Event date: {event_start}, "
+            f"Time until next post: {min_delta if next_post_time else 'N/A'}, "
+            f"Configured update intervals: {website_config['update_intervals']}, "
+            f"Thresholds status: {thresholds_status}"
+        )
+
+        if time_until_event > max_interval:
+            logger.info(
+                f"Event evaluated: '{event['title']}' is not yet eligible. "
+                f"Time until event: {time_until_event} exceeds max interval: {max_interval}"
+            )
+            continue
+
         if last_posted:
-            last_posted = datetime.fromisoformat(last_posted)
-            if now - last_posted <= max_interval:
+            if now - last_posted_dt <= max_interval:
+                logger.info(
+                    f"Event evaluated: '{event['title']}' was already posted at {last_posted_dt} "
+                    f"(within max interval: {max_interval})"
+                )
                 continue
 
+        # Evaluate against each configured threshold; if any qualifies, add event to post
+        qualified = False
         for interval_str in website_config['update_intervals']:
-            interval = interval_map.get(interval_str)
-            if interval and time_until_event <= interval:
-                logger.debug(f"Event hashtags: {event['hashtags']}")
+            delta = interval_map.get(interval_str)
+            if delta and time_until_event <= delta:
+                next_post_for_interval = event_start - delta
+                logger.info(
+                    f"Event evaluated: '{event['title']}'. Last posted: "
+                    f"{last_posted if last_posted else 'Never'}, "
+                    f"Next post scheduled for: {next_post_for_interval} "
+                    f"(meets threshold: {interval_str})"
+                )
                 events_to_post.append(event)
+                qualified = True
                 break
+        if not qualified:
+            logger.info(
+                f"Event evaluated: '{event['title']}' does not meet any posting threshold. "
+                f"Time until event: {time_until_event}"
+            )
 
     logger.info(f"Found {len(events_to_post)} events to post for {website_config['name']}")
     return events_to_post
