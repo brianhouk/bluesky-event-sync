@@ -3,6 +3,4 @@ bluesky-event-sync.log
 *.pyc
 session.txt
 __pycache__
-__init__.py
-pytest.ini
 bluesky_session.json
