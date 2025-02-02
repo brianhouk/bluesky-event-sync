@@ -43,18 +43,16 @@ bluesky-event-publisher
 
 3. Configure the application by editing the `config/config.json` file.
 
-4. Set up environment variables for your Bluesky credentials and other configurations:
+4. Set up environment variables for your Bluesky credentials and other configurations.
 
 ## Environment Variables
-To avoid storing sensitive credentials in the configuration files, use environment variables. Set the following environment variables before running the application:
+To avoid storing sensitive credentials in the configuration files, use environment variables. Set the following environment variables before running the application. When using Docker, you can specify these variables in a `.env` file at the project root – Docker Compose will automatically load them.
 
 - `BLUESKY_DISCOVEROSHKOSH_PASSWORD`: The password for the `discoveroshkosh` Bluesky account.
 - `BLUESKY_WISCONSINEVENTS_PASSWORD`: The password for the `wisconsinevents` Bluesky account.
 - `PROD`: Set this variable to `TRUE` to enable posting to Bluesky. If not set, the application will run in dry-run mode and only log the event data.
 - `SKIP_SCRAPING`: Set this variable to `TRUE` to skip the scraping process and only post events from the database.
-- `MAX_POSTS`: Set this variable to limit the number of posts to Bluesky. If not set, there is no limit on the number of posts.
-
-You can set these environment variables in your shell or in a `.env` file if you are using Docker Compose.
+- `MAX_POSTS`: Limits the number of posts to Bluesky. If not set, there is no limit.
 
 Example:
 ```sh
@@ -66,15 +64,44 @@ export MAX_POSTS=2
 ```
 
 ## Running the Application
-To run the application, use Docker:
-```
+You can run the application either via Docker or directly:
+
+### Using Docker
+```sh
 docker-compose up
 ```
 
-To run the application in dry-run mode:
-```
+### Direct Execution
+By default, the application runs in dry-run mode (only logging event data). To run in dry-run mode:
+```sh
 python src/main.py --dry-run
 ```
+
+If you have set the environment variable `PROD=TRUE`, the application will post events to Bluesky.
+
+## Options and Flags
+The following command-line options are available:
+
+- `--dry-run`: Runs the application without making actual posts to Bluesky. Instead, event data is logged.
+- `--config <file>`: Specify an alternate configuration file (default: `config/config.json`).
+- Additional flags may be added as the project evolves.
+
+Refer to the project's code in [`src/main.py`](src/main.py) for the latest options.
+
+## Running in Debug Mode
+To run the application in debug mode with verbose logging, use the `--debug` flag when executing the application directly:
+
+```sh
+python src/main.py --debug
+```
+
+When using Docker, ensure that your `.env` file is configured with the desired environment variables. Then run:
+
+```sh
+docker-compose up
+```
+
+The debug mode will provide detailed output to help diagnose issues during development.
 
 ## Contributing
 Contributions are welcome! Please submit a pull request or open an issue for any enhancements or bug fixes.
