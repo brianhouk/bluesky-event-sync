@@ -95,7 +95,7 @@ def test_on_session_change_other_event(mock_session):
     mock_session_instance = mock_session.return_value
 
     with patch('src.bluesky.auth.save_session') as mock_save_session:
-        on_session_change(SessionEvent.LOGOUT, mock_session_instance)  # Use a valid SessionEvent member
+        # Use a proper event that doesn't trigger session saving
+        on_session_change('expired', mock_session_instance)
     
     mock_save_session.assert_not_called()
-    
