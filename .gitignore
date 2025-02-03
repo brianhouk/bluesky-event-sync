@@ -1,6 +1,9 @@
 .env
 bluesky-event-sync.log
 *.pyc
+*.pyo
 session.txt
-__pycache__
 bluesky_session.json
+.vscode/*
+__pycache__/
+*.log
