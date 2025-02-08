@@ -198,11 +198,9 @@ def get_postable_events(connection, website_config):
         event_start = datetime.fromisoformat(event['start_date'])
         time_until_event = event_start - now
 
-        # Remove events in the past
-        if time_until_event <= timedelta(0):
+        if time_until_event < -timedelta(hours=24):
             logger.info(
-                f"Event evaluated: '{event['title']}' is in the past (start: {event_start}). "
-                "Removing event from the database."
+                f"Event evaluated: '{event['title']}' is older than 24 hours (start: {event_start}). Removing event from the database."
             )
             cursor.execute("DELETE FROM events WHERE id = ?", (event['id'],))
             connection.commit()
