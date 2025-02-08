@@ -12,6 +12,9 @@ from src.database.db_manager import (
 from src.bluesky.auth import authenticate
 from src.bluesky.poster import post_event_to_bluesky
 
+# Import the backup script
+from src.scripts.backup_database import create_backup, cleanup_old_backups
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -103,7 +106,6 @@ def dry_run(skip_scraping):
         hashtags = event.get('hashtags', '').split()  # Retrieve hashtags from the database
         post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
 
-
         logger.info(f"Dry run: Would post: {post_content}")
     return True
 
@@ -115,6 +117,10 @@ def post(skip_scraping):
         connection = connect_to_db('database/events.db')
         create_event_table(connection)
         create_publication_schedule_table(connection)
+
+        # Create a backup before modifying the database
+        create_backup()
+        cleanup_old_backups()
 
         max_posts = int(os.getenv('MAX_POSTS', '0'))
         post_count = 0
@@ -181,7 +187,6 @@ def post(skip_scraping):
             hashtags = event.get('hashtags', '').split()  # Retrieve hashtags from the database
             post_content = f"{event['title']} ({start_date.strftime('%Y-%m-%d %H:%M')}) - {event['description']} {' '.join(hashtags)} {event['url']}"
 
-         
             try:
                 if os.getenv('PROD') == 'TRUE':
                     post_event_to_bluesky(event, account, connection)
