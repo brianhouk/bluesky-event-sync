@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 from urllib.parse import urljoin
+import html  # Add this import
 
 # Adjust imports based on how the script is run
 if __name__ == "__main__":
@@ -50,7 +51,7 @@ class WinnebagoScraper(BaseScraper):
 
                         # Optional elements with defaults
                         desc_element = event_element.select_one('.views-field-field-description')
-                        description = desc_element.get_text(strip=True) if desc_element else ""
+                        description = html.unescape(desc_element.get_text(strip=True)) if desc_element else ""
 
                         location_element = event_element.select_one('.views-field-field-location')
                         location = location_element.get_text(strip=True) if location_element else ""

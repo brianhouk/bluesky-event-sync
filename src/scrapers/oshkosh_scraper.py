@@ -12,6 +12,7 @@ import time
 import re
 import argparse
 import json
+import html  # Add this import
 
 # Adjust imports based on how the script is run
 if __name__ == "__main__":
@@ -166,7 +167,7 @@ class OshkoshScraper(BaseScraper):
                         'start_date': start_date,
                         'end_date': end_date,
                         'url': event_data.get('url', ''),
-                        'description': event_data.get('description', ''),
+                        'description': html.unescape(event_data.get('description', '')),  # Unescape HTML entities
                         'location': event_data.get('location', {}).get('name', ''),
                         'address': event_data.get('location', {}).get('address', {}).get('streetAddress', ''),
                         'city': event_data.get('location', {}).get('address', {}).get('addressLocality', ''),

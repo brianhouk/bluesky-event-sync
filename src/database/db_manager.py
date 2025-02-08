@@ -240,10 +240,19 @@ def get_postable_events(connection, website_config):
             continue
 
         if last_posted:
-            if now - last_posted_dt <= max_interval:
+            eligible = False
+            for interval_str in website_config['update_intervals']:
+                delta = interval_map.get(interval_str)
+                scheduled_time = event_start - delta
+                # Only allow a new post if the last post was before this interval's threshold
+                if now >= scheduled_time and (now - last_posted_dt) > delta:
+                    eligible = True
+                    break
+
+            if not eligible:
                 logger.info(
                     f"Event evaluated: '{event['title']}' was already posted at {last_posted_dt} "
-                    f"(within max interval: {max_interval})"
+                    f"and does not qualify for any interval."
                 )
                 continue
 
