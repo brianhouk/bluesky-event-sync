@@ -12,6 +12,7 @@ The Bluesky Event Publisher is a Python application designed to scrape events fr
 - Configurable via JSON files.
 - Runs in Docker with SQLite as the datastore.
 - Dry-run mode for testing without making actual posts or database changes.
+- Automatically backs up the database daily and retains the last five backups.
 
 ## Project Structure
 ```
@@ -102,6 +103,18 @@ docker-compose up
 ```
 
 The debug mode will provide detailed output to help diagnose issues during development.
+
+## Database Backup
+The application automatically backs up the database daily and retains the last five backups. The backup script is located at backup_database.py.
+
+## Running Tests
+To run the tests, use the following command:
+
+```
+pytest --cov=src/ tests/
+```
+## Continuous Integration
+The project includes a GitHub Actions workflow for continuous integration. The workflow is defined in ci.yml and runs the tests on every push to the main branch.
 
 ## Contributing
 Contributions are welcome! Please submit a pull request or open an issue for any enhancements or bug fixes.
