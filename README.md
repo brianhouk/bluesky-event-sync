@@ -13,6 +13,7 @@ The Bluesky Event Publisher is a Python application designed to scrape events fr
 - Runs in Docker with SQLite as the datastore.
 - Dry-run mode for testing without making actual posts or database changes.
 - Automatically backs up the database daily and retains the last five backups.
+- Post wall messages immediately to Bluesky.
 
 ## Project Structure
 ```
@@ -107,6 +108,18 @@ The debug mode will provide detailed output to help diagnose issues during devel
 ## Database Backup
 The application automatically backs up the database daily and retains the last five backups. The backup script is located at backup_database.py.
 
+## Miscellaneous Scripts
+ 
+   ### Posting a message across all accounts. 
+
+      You can post a wall message immediately to Bluesky using the post_wall_message.py script. This script inserts a special event into the database with a scheduled time set to the current time, ensuring it gets posted immediately.
+
+      Usage
+      To post a wall message, run the post_wall_message.py script with the desired message, account username, and configuration name:
+      
+      ```
+      python src/scripts/post_wall_message.py "This is a wall message" "discoveroshkosh.bsky.social" "OshkoshEvents" --db-path path/to/your/database.db
+      ```
 ## Running Tests
 To run the tests, use the following command:
 
