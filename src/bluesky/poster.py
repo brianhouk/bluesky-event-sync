@@ -139,9 +139,21 @@ def post_event_to_bluesky(event_data, account_info, connection):
             text_builder.text(f"{base_text}{hashtag_text}")
         
         post_content = text_builder
+        
+        # Create facets for hashtags
+        facets = []
+        for hashtag in hashtags:
+            start_index = post_content.find(hashtag)
+            if start_index != -1:
+                end_index = start_index + len(hashtag)
+                facets.append(models.Facet(
+                    index=models.FacetIndex(byte_start=start_index, byte_end=end_index),
+                    features=[models.FacetFeature(type="mention", value=hashtag)]
+                ))
+        
         logger.info(f"Posting content: {post_content}")
         
-        post = client.send_post(text=post_content)
+        post = client.send_post(text=post_content, facets=facets)
         logger.info(f"Post sent successfully: {post}")
         logger.debug(f"Post URI: {post.uri}, Post CID: {post.cid}")
 
